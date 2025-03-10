@@ -24,7 +24,7 @@ export default function Chatbot() {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (message: string) => {
-      const res = await apiRequest("POST", "/api/chat", { message });
+      const res = await apiRequest("POST", "/api/chat", { content: message });
       return res.json();
     },
     onSuccess: () => {
@@ -111,23 +111,23 @@ export default function Chatbot() {
             chatHistory.map((message: ChatMessage) => (
               <div 
                 key={message.id} 
-                className={`flex gap-3 mb-6 ${message.isUser ? "justify-end" : ""}`}
+                className={`flex gap-3 mb-6 ${message.isUserMessage ? "justify-end" : ""}`}
               >
-                {!message.isUser && (
+                {!message.isUserMessage && (
                   <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                     <i className="fas fa-robot text-white text-xs"></i>
                   </div>
                 )}
                 <div 
                   className={`${
-                    message.isUser 
+                    message.isUserMessage 
                       ? "bg-primary text-white rounded-lg p-3 rounded-tr-none shadow-sm max-w-[80%]" 
                       : "bg-white rounded-lg p-3 rounded-tl-none shadow-sm max-w-[80%]"
                   }`}
                 >
                   <p className="text-sm">{message.content}</p>
                 </div>
-                {message.isUser && (
+                {message.isUserMessage && (
                   <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
                     <span className="text-xs font-medium text-purple-600">
                       {user?.firstName?.charAt(0) || "U"}
@@ -139,7 +139,7 @@ export default function Chatbot() {
           )}
           
           {/* Quick Reply Options (only show after AI response) */}
-          {chatHistory.length > 0 && !chatHistory[chatHistory.length - 1]?.isUser && (
+          {chatHistory.length > 0 && !chatHistory[chatHistory.length - 1]?.isUserMessage && (
             <div className="flex flex-wrap gap-2 mb-6 ml-12">
               {quickReplies.map((reply) => (
                 <button 

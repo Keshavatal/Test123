@@ -66,22 +66,28 @@ export async function generateChatbotResponse(userId: number, userMessage: strin
       const model = genAI.getGenerativeModel({ model: "gemini-pro" });
       
       // Build the chat history for the model
-      const chatPrompt = [
-        { role: "system", parts: [systemMessage] },
-        ...recentMessages.map(msg => ({
-          role: msg.isUserMessage ? "user" : "model",
-          parts: [msg.content]
-        }))
-      ];
+      const chatHistory = recentMessages.map(msg => ({
+        role: msg.isUserMessage ? "user" : "model", 
+        parts: [{ text: msg.content }]
+      }));
       
-      // Generate a response
-      const result = await model.generateContent({
-        contents: chatPrompt,
+      // Add the system message as the first message
+      const chatPrompt = [{ 
+        role: "model", 
+        parts: [{ text: systemMessage }]
+      }, ...chatHistory];
+
+      // Start chat session
+      const chat = model.startChat({
+        history: chatPrompt,
         generationConfig: {
           temperature: 0.7,
           maxOutputTokens: 800,
         },
       });
+      
+      // Generate a response to the latest message
+      const result = await chat.sendMessage(userMessage);
       
       response = result.response.text();
     } else {
