@@ -47,14 +47,16 @@ const fallbackResponses = [
 export async function generateChatbotResponse(userId: number, userMessage: string): Promise<string> {
   try {
     // Save the user message to the database
-    await storage.saveChatMessage({
+    await storage.createChatMessage({
       userId,
-      isUser: true,
+      isUserMessage: true,
       content: userMessage
     });
 
     // Get the chat history to provide context (limit to last 10 messages)
-    const chatHistory = await storage.getChatHistoryByUserId(userId, 10);
+    const chatHistory = await storage.getChatMessagesByUserId(userId);
+    // Only use the last 10 messages for context
+    const recentMessages = chatHistory.slice(-10);
     
     let response: string;
     
@@ -66,8 +68,8 @@ export async function generateChatbotResponse(userId: number, userMessage: strin
       // Build the chat history for the model
       const chatPrompt = [
         { role: "system", parts: [systemMessage] },
-        ...chatHistory.map(msg => ({
-          role: msg.isUser ? "user" : "model",
+        ...recentMessages.map(msg => ({
+          role: msg.isUserMessage ? "user" : "model",
           parts: [msg.content]
         }))
       ];
