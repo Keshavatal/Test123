@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -56,6 +56,11 @@ export default function ProgressPage() {
 
   const { data: exercises, isLoading: exercisesLoading } = useQuery({
     queryKey: ['/api/exercises'],
+    enabled: !!user
+  });
+  
+  const { data: assessment, isLoading: assessmentLoading } = useQuery({
+    queryKey: ['/api/assessment'],
     enabled: !!user
   });
 
@@ -255,6 +260,100 @@ export default function ProgressPage() {
   }
 
   if (!user) return null;
+
+  // Helper functions for data calculations
+  const calculateOverallProgress = () => {
+    const totalActivities = (moods?.length || 0) + (exercises?.length || 0);
+    return Math.min(Math.round((totalActivities / 10) * 100), 100); // Cap at 100%
+  };
+
+  const getMoodDistribution = () => {
+    if (!moods || moods.length === 0) return [];
+    
+    const distribution = {
+      happy: 0,
+      calm: 0,
+      neutral: 0,
+      anxious: 0,
+      sad: 0
+    };
+    
+    moods.forEach(mood => {
+      if (distribution[mood.mood as keyof typeof distribution] !== undefined) {
+        distribution[mood.mood as keyof typeof distribution]++;
+      }
+    });
+    
+    return Object.entries(distribution).map(([name, value]) => ({ name, value }));
+  };
+  
+  const getExerciseTypeDistribution = () => {
+    if (!exercises || exercises.length === 0) return [];
+    
+    const distribution: Record<string, number> = {};
+    
+    exercises.forEach(exercise => {
+      distribution[exercise.type] = (distribution[exercise.type] || 0) + 1;
+    });
+    
+    return Object.entries(distribution).map(([name, value]) => ({ name, value }));
+  };
+  
+  const getMoodTrendData = () => {
+    if (!moods || moods.length === 0) return Array(7).fill(0).map((_, i) => ({
+      date: subDays(new Date(), 6 - i).toISOString(),
+      dateFormatted: format(subDays(new Date(), 6 - i), 'MMM d'),
+      intensity: 0,
+      count: 0
+    }));
+    
+    const last7Days = Array(7).fill(0).map((_, i) => {
+      const date = subDays(new Date(), 6 - i);
+      const dayMoods = moods.filter(mood => {
+        const moodDate = parseISO(mood.createdAt);
+        return moodDate.getDate() === date.getDate() && 
+               moodDate.getMonth() === date.getMonth() &&
+               moodDate.getFullYear() === date.getFullYear();
+      });
+      
+      return {
+        date: date.toISOString(),
+        dateFormatted: format(date, 'MMM d'),
+        intensity: dayMoods.reduce((sum, mood) => sum + mood.intensity, 0) / (dayMoods.length || 1),
+        count: dayMoods.length
+      };
+    });
+    
+    return last7Days;
+  };
+  
+  const getExerciseTrendData = () => {
+    if (!exercises || exercises.length === 0) return Array(7).fill(0).map((_, i) => ({
+      date: subDays(new Date(), 6 - i).toISOString(),
+      dateFormatted: format(subDays(new Date(), 6 - i), 'MMM d'),
+      minutes: 0,
+      count: 0
+    }));
+    
+    const last7Days = Array(7).fill(0).map((_, i) => {
+      const date = subDays(new Date(), 6 - i);
+      const dayExercises = exercises.filter(exercise => {
+        const exerciseDate = parseISO(exercise.createdAt);
+        return exerciseDate.getDate() === date.getDate() && 
+               exerciseDate.getMonth() === date.getMonth() &&
+               exerciseDate.getFullYear() === date.getFullYear();
+      });
+      
+      return {
+        date: date.toISOString(),
+        dateFormatted: format(date, 'MMM d'),
+        minutes: dayExercises.reduce((sum, exercise) => sum + (exercise.duration / 60), 0),
+        count: dayExercises.length
+      };
+    });
+    
+    return last7Days;
+  };
 
   const progressPercentage = calculateOverallProgress();
   const moodDistribution = getMoodDistribution();

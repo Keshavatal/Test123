@@ -41,7 +41,7 @@ export default function AchievementsSection() {
     {
       id: '7-day-streak',
       name: '7-Day Streak',
-      icon: <Flame className="text-2xl text-primary" />,
+      icon: <Zap className="text-2xl text-primary" />,
       isCompleted: (user?.streak || 0) >= 7
     },
     {
@@ -66,7 +66,13 @@ export default function AchievementsSection() {
 
   const isLoading = isAchievementsLoading || isExercisesLoading || isJournalsLoading || !user;
 
-  // Calculate XP progress for next level
+  import { useAuth } from "@/context/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { Smile, BookOpen, Brain, Wind, Zap } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Calculate XP progress for next level
   const calculateXPProgress = () => {
     if (!user) return { currentXP: 0, required: 100, progress: 0 };
     
