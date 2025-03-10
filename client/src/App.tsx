@@ -14,6 +14,16 @@ import Journal from "@/pages/Journal";
 import Progress from "@/pages/Progress";
 import NotFound from "@/pages/not-found";
 
+// Exercise Pages
+import BreathingExercise from "@/pages/exercises/BreathingExercise";
+import MindfulnessMeditation from "@/pages/exercises/MindfulnessMeditation";
+import CognitiveRestructuring from "@/pages/exercises/CognitiveRestructuring";
+import GratitudePractice from "@/pages/exercises/GratitudePractice";
+import BoxBreathing from "@/pages/exercises/BoxBreathing";
+import ProgressiveRelaxation from "@/pages/exercises/ProgressiveRelaxation";
+import ThoughtRecord from "@/pages/exercises/ThoughtRecord";
+import ValuesClarification from "@/pages/exercises/ValuesClarification";
+
 function Router() {
   return (
     <Switch>
@@ -24,6 +34,17 @@ function Router() {
       <Route path="/exercises" component={Exercises} />
       <Route path="/journal" component={Journal} />
       <Route path="/progress" component={Progress} />
+      
+      {/* Exercise Routes */}
+      <Route path="/exercises/breathing" component={BreathingExercise} />
+      <Route path="/exercises/mindfulness" component={MindfulnessMeditation} />
+      <Route path="/exercises/cognitive" component={CognitiveRestructuring} />
+      <Route path="/exercises/gratitude" component={GratitudePractice} />
+      <Route path="/exercises/box-breathing" component={BoxBreathing} />
+      <Route path="/exercises/progressive-relaxation" component={ProgressiveRelaxation} />
+      <Route path="/exercises/thought-record" component={ThoughtRecord} />
+      <Route path="/exercises/values-clarification" component={ValuesClarification} />
+      
       <Route component={NotFound} />
     </Switch>
   );
