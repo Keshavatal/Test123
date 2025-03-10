@@ -42,6 +42,10 @@ import {
   Meh,
   CloudRain,
   Zap,
+  BookOpen,
+  Brain,
+  Wind,
+  PenLine,
 } from "lucide-react";
 
 export default function ProgressPage() {
