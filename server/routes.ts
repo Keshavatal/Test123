@@ -394,7 +394,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Create chat session
         const chat = model.startChat({
-          history: [systemPrompt, ...chatHistory]
+          history: [systemPrompt, ...chatHistory],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 800,
+          }
         });
         
         // Generate response to the user's message

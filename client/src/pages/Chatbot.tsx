@@ -16,7 +16,7 @@ export default function Chatbot() {
   const { toast } = useToast();
   
   // Fetch chat history
-  const { data: chatHistory = [], isLoading } = useQuery({
+  const { data: chatHistory = [], isLoading } = useQuery<ChatMessage[]>({
     queryKey: ["/api/chat"],
     enabled: !!user,
   });
