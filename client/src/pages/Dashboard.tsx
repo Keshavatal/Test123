@@ -1,183 +1,137 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useUserContext } from "@/contexts/UserContext";
-import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "wouter";
-
-import { MoodTracker } from "@/components/MoodTracker";
-import { ProgressCard } from "@/components/ProgressCard";
-import { XPCard } from "@/components/XPCard";
-import { StreakCard } from "@/components/StreakCard";
-import { ExerciseCard } from "@/components/ExerciseCard";
-import { ChatPreview } from "@/components/ChatPreview";
-import { AchievementBadge } from "@/components/AchievementBadge";
-import { ChatbotInterface } from "@/components/ChatbotInterface";
-import { BreathingExercise } from "@/components/BreathingExercise";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import MoodTracker from "@/components/dashboard/MoodTracker";
+import ProgressStats from "@/components/dashboard/ProgressStats";
+import ProgressChart from "@/components/dashboard/ProgressChart";
+import ExerciseCard from "@/components/dashboard/ExerciseCard";
+import ChatbotInterface from "@/components/dashboard/ChatbotInterface";
+import AchievementsSection from "@/components/dashboard/AchievementsSection";
+import DailyChallengeCard from "@/components/dashboard/DailyChallengeCard";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { calculateAssessmentScore } from "@/lib/exercises";
-import { Exercise } from "@shared/schema";
+import { Link } from "wouter";
 
 export default function Dashboard() {
-  const { user } = useUserContext();
-  const [_location, navigate] = useLocation();
-  const [chatbotOpen, setChatbotOpen] = useState(false);
-  const [activeExercise, setActiveExercise] = useState<Exercise | null>(null);
-  const { toast } = useToast();
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+  
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation('/login');
+    } else if (user && !user.initialAssessmentCompleted) {
+      setLocation('/assessment');
+    }
+  }, [user, isLoading, setLocation]);
 
-  // Fetch data
-  const { data: exercises = [] } = useQuery({
-    queryKey: ["/api/exercises"],
-    enabled: !!user,
-  });
+  // Recommended exercises
+  const recommendedExercises = [
+    {
+      id: "cognitive",
+      title: "Cognitive Restructuring",
+      description: "Challenge and reframe negative thoughts with this guided exercise.",
+      duration: 5,
+      type: "cognitive" as const,
+      path: "/exercises/cognitive"
+    },
+    {
+      id: "breathing",
+      title: "Breathing Exercise",
+      description: "Calm your mind with deep breathing techniques to reduce anxiety.",
+      duration: 3,
+      type: "breathing" as const,
+      path: "/exercises/breathing"
+    },
+    {
+      id: "gratitude",
+      title: "Gratitude Practice",
+      description: "Focus on positive aspects of your life to improve your mood.",
+      duration: 7,
+      type: "gratitude" as const,
+      path: "/exercises/gratitude"
+    },
+    {
+      id: "mindfulness",
+      title: "Mindfulness Meditation",
+      description: "Practice being present in the moment to reduce stress and anxiety.",
+      duration: 10,
+      type: "mindfulness" as const,
+      path: "/exercises/mindfulness"
+    }
+  ];
 
-  const { data: chatMessages = [] } = useQuery({
-    queryKey: ["/api/chat"],
-    enabled: !!user,
-  });
-
-  const { data: latestAssessment } = useQuery({
-    queryKey: ["/api/assessment/latest"],
-    enabled: !!user,
-  });
-
-  const { data: achievements = [] } = useQuery({
-    queryKey: ["/api/achievements/user"],
-    enabled: !!user,
-  });
-
-  // Calculate wellness score
-  const wellnessScore = latestAssessment ? calculateAssessmentScore(latestAssessment.answers) : 75;
-
-  // Handle starting an exercise
-  const handleStartExercise = (exercise: Exercise) => {
-    setActiveExercise(exercise);
-  };
-
-  // If user is not logged in, redirect to auth page
-  if (!user) {
-    navigate("/auth");
-    return null;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-lg font-quicksand">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
+  if (!user) return null;
+
   return (
-    <div className="animate-fade-in">
-      <header className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold font-quicksand text-foreground">
-          Welcome back, <span className="text-primary">{user.firstName}</span>!
-        </h1>
-        <p className="text-gray-500 mt-1">Let's continue your journey to better mental health.</p>
-      </header>
-
-      {/* Mood Tracker */}
-      <MoodTracker userId={user.id} />
-
-      {/* Daily Progress Stats */}
-      <section className="mb-10 animate-slide-up" style={{ animationDelay: "0.2s" }}>
-        <h2 className="text-xl font-semibold font-quicksand mb-4">Your Progress</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <ProgressCard 
-            title="Mental Wellness" 
-            percentage={wellnessScore} 
-            changeText={wellnessScore > 70 ? "Up 5% this week" : "Down 3% this week"} 
-          />
-          <XPCard 
-            xp={user.xp} 
-            level={user.level} 
-            nextLevelXp={(user.level) * 100} 
-          />
-          <StreakCard currentStreak={user.currentStreak} />
-        </div>
-      </section>
-
-      {/* Recommended Exercises */}
-      <section className="mb-10 animate-slide-up" style={{ animationDelay: "0.3s" }}>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold font-quicksand">Recommended for You</h2>
-          <Button 
-            variant="link" 
-            className="text-primary"
-            onClick={() => navigate("/exercises")}
-          >
-            See all
-          </Button>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {exercises.slice(0, 3).map((exercise) => (
-            <ExerciseCard 
-              key={exercise.id} 
-              exercise={exercise} 
-              onStartExercise={handleStartExercise} 
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* AI Chatbot Section */}
-      <section className="animate-slide-up" style={{ animationDelay: "0.4s" }}>
-        <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-full bg-primary bg-opacity-20 flex items-center justify-center">
-              <i className="fas fa-robot text-primary text-xl"></i>
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold font-quicksand">Your AI Wellness Coach</h2>
-              <p className="text-sm text-gray-500">Personalized CBT exercises and guidance</p>
-            </div>
-          </div>
-          
-          <ChatPreview messages={chatMessages} onClick={() => setChatbotOpen(true)} />
-
-          <Button 
-            className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold flex items-center justify-center gap-2 btn-hover-effect"
-            onClick={() => setChatbotOpen(true)}
-          >
-            <i className="fas fa-comments"></i>
-            <span>Continue Conversation</span>
-          </Button>
-        </div>
-      </section>
-
-      {/* Achievements Section */}
-      <section className="mt-10 animate-slide-up" style={{ animationDelay: "0.5s" }}>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold font-quicksand">Recent Achievements</h2>
-          <Button 
-            variant="link" 
-            className="text-primary"
-            onClick={() => navigate("/achievements")}
-          >
-            View all
-          </Button>
-        </div>
-        <div className="flex flex-wrap gap-4">
-          {achievements.slice(0, 4).map((achievement) => (
-            <AchievementBadge
-              key={achievement.id}
-              title={achievement.title}
-              icon={achievement.icon}
-              iconBg={achievement.iconBg}
-              unlocked={achievement.unlocked}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="mt-12 text-center text-sm text-gray-500 pb-6">
-        <p>© 2023 MindWell - CBT Mental Wellness App. All rights reserved.</p>
-      </footer>
-
-      {/* Modals/Dialogs */}
-      <ChatbotInterface isOpen={chatbotOpen} onClose={() => setChatbotOpen(false)} />
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
       
-      {activeExercise && activeExercise.type === "breathing" && (
-        <BreathingExercise 
-          exercise={activeExercise} 
-          isOpen={!!activeExercise} 
-          onClose={() => setActiveExercise(null)} 
-        />
-      )}
+      <main className="flex-grow container mx-auto px-4 py-8">
+        <section className="mb-12">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-quicksand font-bold mb-2">Welcome back, {user.firstName}</h2>
+              <p className="text-lg text-textColor opacity-80">Continue your mental wellness journey</p>
+            </div>
+            
+            <MoodTracker />
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column (2/3 width on large screens) */}
+          <div className="lg:col-span-2">
+            <section className="bg-white rounded-2xl shadow-md p-6 mb-8">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-quicksand font-bold">Your Wellness Journey</h3>
+              </div>
+
+              <ProgressStats />
+              <ProgressChart />
+            </section>
+
+            <section className="bg-white rounded-2xl shadow-md p-6 mb-8">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-quicksand font-bold">Recommended CBT Exercises</h3>
+                <Link href="/exercises">
+                  <Button variant="ghost" className="text-sm">
+                    View all exercises
+                  </Button>
+                </Link>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {recommendedExercises.map((exercise) => (
+                  <ExerciseCard key={exercise.id} exercise={exercise} />
+                ))}
+              </div>
+            </section>
+          </div>
+
+          {/* Right Column (1/3 width on large screens) */}
+          <div>
+            <ChatbotInterface />
+            <AchievementsSection />
+            <DailyChallengeCard />
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
     </div>
   );
 }

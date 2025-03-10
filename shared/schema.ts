@@ -2,151 +2,119 @@ import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User Schema
+// User
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  email: text("email").notNull().unique(),
   firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  level: integer("level").default(1).notNull(),
-  xp: integer("xp").default(0).notNull(),
-  currentStreak: integer("current_streak").default(0).notNull(),
+  lastName: text("last_name"),
+  email: text("email").notNull().unique(),
+  initialAssessmentCompleted: boolean("initial_assessment_completed").default(false),
+  xpPoints: integer("xp_points").default(0),
+  level: integer("level").default(1),
+  streak: integer("streak").default(0),
   lastActive: timestamp("last_active").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Mood Tracking Schema
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  xpPoints: true,
+  level: true,
+  streak: true,
+  lastActive: true,
+});
+
+// Mood entries
 export const moods = pgTable("moods", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  mood: text("mood").notNull(), // 'great', 'good', 'okay', 'low', 'sad'
-  note: text("note"),
+  userId: integer("user_id").notNull(),
+  mood: text("mood").notNull(),
+  intensity: integer("intensity").notNull(),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Exercises Schema
+export const insertMoodSchema = createInsertSchema(moods).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Exercises completed
 export const exercises = pgTable("exercises", {
   id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  type: text("type").notNull(), // 'breathing', 'journal', 'cognitive', 'gratitude', 'mindfulness'
-  durationMinutes: integer("duration_minutes").notNull(),
-  xpReward: integer("xp_reward").notNull(),
-  icon: text("icon").notNull(),
-  iconBg: text("icon_bg").notNull(),
+  userId: integer("user_id").notNull(),
+  type: text("type").notNull(),
+  duration: integer("duration").notNull(),
+  notes: text("notes"),
+  completed: boolean("completed").default(true),
+  xpEarned: integer("xp_earned").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-// User Exercise Completions Schema
-export const exerciseCompletions = pgTable("exercise_completions", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  exerciseId: integer("exercise_id").notNull().references(() => exercises.id),
-  completedAt: timestamp("completed_at").defaultNow(),
+export const insertExerciseSchema = createInsertSchema(exercises).omit({
+  id: true,
+  completed: true,
+  createdAt: true,
 });
 
-// Achievements Schema
-export const achievements = pgTable("achievements", {
+// Journal entries
+export const journals = pgTable("journals", {
   id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  icon: text("icon").notNull(),
-  iconBg: text("icon_bg").notNull(),
-  requirement: text("requirement").notNull(),
-  xpReward: integer("xp_reward").notNull(),
-});
-
-// User Achievements Schema
-export const userAchievements = pgTable("user_achievements", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  achievementId: integer("achievement_id").notNull().references(() => achievements.id),
-  unlockedAt: timestamp("unlocked_at").defaultNow(),
-});
-
-// Journal Entries Schema
-export const journalEntries = pgTable("journal_entries", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull(),
   title: text("title").notNull(),
   content: text("content").notNull(),
   mood: text("mood"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Chat Messages Schema
-export const chatMessages = pgTable("chat_messages", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  isUser: boolean("is_user").notNull(),
-  content: text("content").notNull(),
-  timestamp: timestamp("timestamp").defaultNow(),
+export const insertJournalSchema = createInsertSchema(journals).omit({
+  id: true,
+  createdAt: true,
 });
 
-// Assessment Schema
+// Achievements/badges
+export const achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  badgeId: text("badge_id").notNull(),
+  earnedAt: timestamp("earned_at").defaultNow(),
+});
+
+export const insertAchievementSchema = createInsertSchema(achievements).omit({
+  id: true,
+  earnedAt: true,
+});
+
+// Initial assessment
 export const assessments = pgTable("assessments", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  answers: json("answers").notNull(),
+  userId: integer("user_id").notNull().unique(),
+  responses: json("responses").notNull(),
   score: integer("score").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Insert Schemas
-export const insertUserSchema = createInsertSchema(users).omit({ 
-  id: true, 
-  level: true, 
-  xp: true, 
-  currentStreak: true, 
-  lastActive: true,
-  createdAt: true 
+export const insertAssessmentSchema = createInsertSchema(assessments).omit({
+  id: true,
+  createdAt: true,
 });
 
-export const insertMoodSchema = createInsertSchema(moods).omit({ 
-  id: true, 
-  createdAt: true 
+// Chat messages
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  content: text("content").notNull(),
+  isUserMessage: boolean("is_user_message").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertExerciseSchema = createInsertSchema(exercises).omit({ 
-  id: true 
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
+  id: true,
+  createdAt: true,
 });
 
-export const insertExerciseCompletionSchema = createInsertSchema(exerciseCompletions).omit({ 
-  id: true, 
-  completedAt: true 
-});
-
-export const insertAchievementSchema = createInsertSchema(achievements).omit({ 
-  id: true 
-});
-
-export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({ 
-  id: true, 
-  unlockedAt: true 
-});
-
-export const insertJournalEntrySchema = createInsertSchema(journalEntries).omit({ 
-  id: true, 
-  createdAt: true 
-});
-
-export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ 
-  id: true, 
-  timestamp: true 
-});
-
-export const insertAssessmentSchema = createInsertSchema(assessments).omit({ 
-  id: true, 
-  createdAt: true 
-});
-
-export const loginSchema = z.object({
-  username: z.string().min(3),
-  password: z.string().min(6),
-});
-
-// Type Exports
+// Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
@@ -156,22 +124,14 @@ export type InsertMood = z.infer<typeof insertMoodSchema>;
 export type Exercise = typeof exercises.$inferSelect;
 export type InsertExercise = z.infer<typeof insertExerciseSchema>;
 
-export type ExerciseCompletion = typeof exerciseCompletions.$inferSelect;
-export type InsertExerciseCompletion = z.infer<typeof insertExerciseCompletionSchema>;
+export type Journal = typeof journals.$inferSelect;
+export type InsertJournal = z.infer<typeof insertJournalSchema>;
 
 export type Achievement = typeof achievements.$inferSelect;
 export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
 
-export type UserAchievement = typeof userAchievements.$inferSelect;
-export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
-
-export type JournalEntry = typeof journalEntries.$inferSelect;
-export type InsertJournalEntry = z.infer<typeof insertJournalEntrySchema>;
-
-export type ChatMessage = typeof chatMessages.$inferSelect;
-export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
-
 export type Assessment = typeof assessments.$inferSelect;
 export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
 
-export type Login = z.infer<typeof loginSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;

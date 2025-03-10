@@ -1,413 +1,428 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { z } from "zod";
 import { 
-  insertUserSchema, loginSchema, insertMoodSchema, insertJournalEntrySchema,
-  insertExerciseCompletionSchema, insertAssessmentSchema
+  insertUserSchema, 
+  insertMoodSchema, 
+  insertExerciseSchema, 
+  insertJournalSchema, 
+  insertAssessmentSchema,
+  insertChatMessageSchema,
+  insertAchievementSchema
 } from "@shared/schema";
-import { ZodError } from "zod";
-import { fromZodError } from "zod-validation-error";
+import { fromZodError, ValidationError } from "zod-validation-error";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import session from "express-session";
-import { generateChatbotResponse } from "./chatbot";
+import MemoryStore from "memorystore";
 
-// Middleware for checking if user is authenticated
-const requireAuth = (req: Request, res: Response, next: Function) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ message: "Not authenticated" });
-  }
-  next();
-};
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Configure session middleware
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || "mindwell-secret",
-      resave: false,
-      saveUninitialized: false,
-      cookie: { 
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      },
-    })
-  );
+  const httpServer = createServer(app);
 
-  // AUTH ROUTES
-  // Register a new user
-  app.post("/api/auth/register", async (req, res) => {
-    try {
-      const userData = insertUserSchema.parse(req.body);
-      
-      // Check if username already exists
-      const existingUsername = await storage.getUserByUsername(userData.username);
-      if (existingUsername) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-      
-      // Check if email already exists
-      const existingEmail = await storage.getUserByEmail(userData.email);
-      if (existingEmail) {
-        return res.status(400).json({ message: "Email already exists" });
-      }
-      
-      const newUser = await storage.createUser(userData);
-      
-      // Set user session
-      req.session.userId = newUser.id;
-      
-      // Return user without password
-      const { password, ...userWithoutPassword } = newUser;
-      res.status(201).json(userWithoutPassword);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const validationError = fromZodError(error);
-        res.status(400).json({ message: validationError.message });
-      } else {
-        res.status(500).json({ message: "Server error" });
-      }
-    }
-  });
-  
-  // Login user
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      const loginData = loginSchema.parse(req.body);
-      
-      const user = await storage.getUserByUsername(loginData.username);
-      
-      if (!user || user.password !== loginData.password) {
-        return res.status(401).json({ message: "Invalid username or password" });
-      }
-      
-      // Set user session
-      req.session.userId = user.id;
-      
-      // Return user without password
-      const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const validationError = fromZodError(error);
-        res.status(400).json({ message: validationError.message });
-      } else {
-        res.status(500).json({ message: "Server error" });
-      }
-    }
-  });
-  
-  // Logout user
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Failed to logout" });
-      }
-      res.json({ message: "Successfully logged out" });
-    });
-  });
-  
-  // Get current user
-  app.get("/api/auth/me", async (req, res) => {
-    const userId = req.session.userId;
-    
+  // Authentication middleware
+  const authenticate = async (req: Request, res: Response, next: Function) => {
+    const userId = req.session?.userId;
     if (!userId) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(401).json({ message: "Unauthorized" });
     }
     
     const user = await storage.getUser(userId);
-    
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(401).json({ message: "User not found" });
     }
     
-    // Update last active timestamp
-    await storage.updateUser(userId, { lastActive: new Date() });
-    
-    // Check and update streak
-    const today = new Date();
-    const lastActive = user.lastActive;
-    const dayDifference = Math.floor((today.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
-    
-    let updatedUser = user;
-    
-    if (dayDifference === 1) {
-      // Consecutive day, increment streak
-      updatedUser = await storage.updateUser(userId, { 
-        currentStreak: user.currentStreak + 1 
-      }) || user;
-    } else if (dayDifference > 1) {
-      // Streak broken, reset to 1 (today)
-      updatedUser = await storage.updateUser(userId, { currentStreak: 1 }) || user;
-    }
-    
-    // Return user without password
-    const { password, ...userWithoutPassword } = updatedUser;
-    res.json(userWithoutPassword);
-  });
+    req.user = user;
+    next();
+  };
+
+  // Session setup
+  const MemoryStoreSession = MemoryStore(session);
   
-  // MOOD ROUTES
-  // Record user mood
-  app.post("/api/moods", requireAuth, async (req, res) => {
+  app.use(
+    session({
+      cookie: { maxAge: 86400000 }, // 24 hours
+      store: new MemoryStoreSession({
+        checkPeriod: 86400000, // prune expired entries every 24h
+      }),
+      resave: false,
+      saveUninitialized: false,
+      secret: process.env.SESSION_SECRET || "mindful-path-secret",
+    })
+  );
+
+  // Auth routes
+  app.post('/api/register', async (req, res) => {
     try {
-      const userId = req.session.userId as number;
-      const moodData = insertMoodSchema.parse({ ...req.body, userId });
+      const validatedData = insertUserSchema.parse(req.body);
       
-      const newMood = await storage.createMood(moodData);
-      res.status(201).json(newMood);
+      // Check if username is taken
+      const existingUsername = await storage.getUserByUsername(validatedData.username);
+      if (existingUsername) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+      
+      // Check if email is taken
+      const existingEmail = await storage.getUserByEmail(validatedData.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      
+      const user = await storage.createUser(validatedData);
+      
+      // Don't send password back to client
+      const { password, ...userWithoutPassword } = user;
+      
+      // Set session
+      req.session.userId = user.id;
+      
+      res.status(201).json(userWithoutPassword);
     } catch (error) {
-      if (error instanceof ZodError) {
+      if (error instanceof z.ZodError) {
         const validationError = fromZodError(error);
-        res.status(400).json({ message: validationError.message });
-      } else {
-        res.status(500).json({ message: "Server error" });
+        return res.status(400).json({ message: validationError.message });
       }
+      res.status(500).json({ message: "Server error during registration" });
     }
-  });
-  
-  // Get user moods
-  app.get("/api/moods", requireAuth, async (req, res) => {
-    const userId = req.session.userId as number;
-    const moods = await storage.getMoodsByUserId(userId);
-    res.json(moods);
-  });
-  
-  // Get latest user mood
-  app.get("/api/moods/latest", requireAuth, async (req, res) => {
-    const userId = req.session.userId as number;
-    const mood = await storage.getLatestMoodByUserId(userId);
-    
-    if (!mood) {
-      return res.status(404).json({ message: "No mood entries found" });
-    }
-    
-    res.json(mood);
-  });
-  
-  // EXERCISE ROUTES
-  // Get all exercises
-  app.get("/api/exercises", requireAuth, async (_req, res) => {
-    const exercises = await storage.getExercises();
-    res.json(exercises);
-  });
-  
-  // Get exercise by ID
-  app.get("/api/exercises/:id", requireAuth, async (req, res) => {
-    const exerciseId = parseInt(req.params.id);
-    
-    if (isNaN(exerciseId)) {
-      return res.status(400).json({ message: "Invalid exercise ID" });
-    }
-    
-    const exercise = await storage.getExerciseById(exerciseId);
-    
-    if (!exercise) {
-      return res.status(404).json({ message: "Exercise not found" });
-    }
-    
-    res.json(exercise);
-  });
-  
-  // Get exercises by type
-  app.get("/api/exercises/type/:type", requireAuth, async (req, res) => {
-    const type = req.params.type;
-    const exercises = await storage.getExercisesByType(type);
-    res.json(exercises);
-  });
-  
-  // Record exercise completion
-  app.post("/api/exercises/complete", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session.userId as number;
-      const completionData = insertExerciseCompletionSchema.parse({
-        ...req.body,
-        userId
-      });
-      
-      const completion = await storage.addExerciseCompletion(completionData);
-      
-      // Get updated user with new XP
-      const user = await storage.getUser(userId);
-      
-      res.status(201).json({
-        completion,
-        userXp: user?.xp,
-        userLevel: user?.level
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const validationError = fromZodError(error);
-        res.status(400).json({ message: validationError.message });
-      } else {
-        res.status(500).json({ message: "Server error" });
-      }
-    }
-  });
-  
-  // Get user exercise completions
-  app.get("/api/exercises/completions", requireAuth, async (req, res) => {
-    const userId = req.session.userId as number;
-    const completions = await storage.getExerciseCompletionsByUserId(userId);
-    res.json(completions);
-  });
-  
-  // Get recent exercise completions (default 7 days)
-  app.get("/api/exercises/completions/recent", requireAuth, async (req, res) => {
-    const userId = req.session.userId as number;
-    const days = parseInt(req.query.days as string) || 7;
-    
-    const completions = await storage.getRecentExerciseCompletions(userId, days);
-    res.json(completions);
-  });
-  
-  // ACHIEVEMENT ROUTES
-  // Get all achievements
-  app.get("/api/achievements", requireAuth, async (_req, res) => {
-    const achievements = await storage.getAchievements();
-    res.json(achievements);
-  });
-  
-  // Get user achievements
-  app.get("/api/achievements/user", requireAuth, async (req, res) => {
-    const userId = req.session.userId as number;
-    const userAchievements = await storage.getUserAchievements(userId);
-    
-    // Get all achievements for reference
-    const allAchievements = await storage.getAchievements();
-    
-    // Create a map of unlocked achievements
-    const unlockedMap = new Map(
-      userAchievements.map(ua => [ua.achievementId, ua])
-    );
-    
-    // Return all achievements with an 'unlocked' property
-    const achievementsWithStatus = allAchievements.map(achievement => ({
-      ...achievement,
-      unlocked: unlockedMap.has(achievement.id),
-      unlockedAt: unlockedMap.get(achievement.id)?.unlockedAt || null
-    }));
-    
-    res.json(achievementsWithStatus);
-  });
-  
-  // JOURNAL ROUTES
-  // Create journal entry
-  app.post("/api/journal", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session.userId as number;
-      const entryData = insertJournalEntrySchema.parse({
-        ...req.body,
-        userId
-      });
-      
-      const entry = await storage.createJournalEntry(entryData);
-      res.status(201).json(entry);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const validationError = fromZodError(error);
-        res.status(400).json({ message: validationError.message });
-      } else {
-        res.status(500).json({ message: "Server error" });
-      }
-    }
-  });
-  
-  // Get user journal entries
-  app.get("/api/journal", requireAuth, async (req, res) => {
-    const userId = req.session.userId as number;
-    const entries = await storage.getJournalEntriesByUserId(userId);
-    res.json(entries);
-  });
-  
-  // Get journal entry by ID
-  app.get("/api/journal/:id", requireAuth, async (req, res) => {
-    const userId = req.session.userId as number;
-    const entryId = parseInt(req.params.id);
-    
-    if (isNaN(entryId)) {
-      return res.status(400).json({ message: "Invalid entry ID" });
-    }
-    
-    const entry = await storage.getJournalEntryById(entryId);
-    
-    if (!entry) {
-      return res.status(404).json({ message: "Journal entry not found" });
-    }
-    
-    // Check if the entry belongs to the user
-    if (entry.userId !== userId) {
-      return res.status(403).json({ message: "Not authorized to access this entry" });
-    }
-    
-    res.json(entry);
-  });
-  
-  // CHATBOT ROUTES
-  // Get chat history
-  app.get("/api/chat", requireAuth, async (req, res) => {
-    const userId = req.session.userId as number;
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-    
-    const chatHistory = await storage.getChatHistoryByUserId(userId, limit);
-    res.json(chatHistory);
-  });
-  
-  // Send message to chatbot
-  app.post("/api/chat", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session.userId as number;
-      const { message } = req.body;
-      
-      if (!message || typeof message !== "string") {
-        return res.status(400).json({ message: "Message is required" });
-      }
-      
-      const response = await generateChatbotResponse(userId, message);
-      res.json({ response });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to generate response" });
-    }
-  });
-  
-  // ASSESSMENT ROUTES
-  // Submit assessment
-  app.post("/api/assessment", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session.userId as number;
-      const assessmentData = insertAssessmentSchema.parse({
-        ...req.body,
-        userId
-      });
-      
-      const assessment = await storage.saveAssessment(assessmentData);
-      res.status(201).json(assessment);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const validationError = fromZodError(error);
-        res.status(400).json({ message: validationError.message });
-      } else {
-        res.status(500).json({ message: "Server error" });
-      }
-    }
-  });
-  
-  // Get user assessments
-  app.get("/api/assessment", requireAuth, async (req, res) => {
-    const userId = req.session.userId as number;
-    const assessments = await storage.getAssessmentsByUserId(userId);
-    res.json(assessments);
-  });
-  
-  // Get latest assessment
-  app.get("/api/assessment/latest", requireAuth, async (req, res) => {
-    const userId = req.session.userId as number;
-    const assessment = await storage.getLatestAssessmentByUserId(userId);
-    
-    if (!assessment) {
-      return res.status(404).json({ message: "No assessments found" });
-    }
-    
-    res.json(assessment);
   });
 
-  const httpServer = createServer(app);
+  app.post('/api/login', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+      
+      const user = await storage.getUserByUsername(username);
+      
+      if (!user || user.password !== password) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      
+      // Set session
+      req.session.userId = user.id;
+      
+      // Don't send password back to client
+      const { password: _, ...userWithoutPassword } = user;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      res.status(500).json({ message: "Server error during login" });
+    }
+  });
+
+  app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Error logging out" });
+      }
+      
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  app.get('/api/me', authenticate, async (req, res) => {
+    // Password is already removed by authenticate middleware
+    res.json(req.user);
+  });
+
+  // Assessment routes
+  app.post('/api/assessment', authenticate, async (req, res) => {
+    try {
+      const validatedData = insertAssessmentSchema.parse({
+        ...req.body,
+        userId: req.user.id
+      });
+      
+      const assessment = await storage.createAssessment(validatedData);
+      
+      // Update user's initialAssessmentCompleted status
+      await storage.updateUser(req.user.id, { initialAssessmentCompleted: true });
+      
+      res.status(201).json(assessment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      res.status(500).json({ message: "Server error during assessment submission" });
+    }
+  });
+
+  app.get('/api/assessment', authenticate, async (req, res) => {
+    try {
+      const assessment = await storage.getAssessmentByUserId(req.user.id);
+      
+      if (!assessment) {
+        return res.status(404).json({ message: "Assessment not found" });
+      }
+      
+      res.json(assessment);
+    } catch (error) {
+      res.status(500).json({ message: "Server error fetching assessment" });
+    }
+  });
+
+  // Mood routes
+  app.post('/api/moods', authenticate, async (req, res) => {
+    try {
+      const validatedData = insertMoodSchema.parse({
+        ...req.body,
+        userId: req.user.id
+      });
+      
+      const mood = await storage.createMood(validatedData);
+      
+      // Add XP for tracking mood
+      const user = await storage.getUser(req.user.id);
+      if (user) {
+        await storage.updateUser(user.id, { 
+          xpPoints: user.xpPoints + 10,
+          lastActive: new Date()
+        });
+      }
+      
+      res.status(201).json(mood);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      res.status(500).json({ message: "Server error during mood submission" });
+    }
+  });
+
+  app.get('/api/moods', authenticate, async (req, res) => {
+    try {
+      const moods = await storage.getMoodsByUserId(req.user.id);
+      res.json(moods);
+    } catch (error) {
+      res.status(500).json({ message: "Server error fetching moods" });
+    }
+  });
+
+  // Exercise routes
+  app.post('/api/exercises', authenticate, async (req, res) => {
+    try {
+      const validatedData = insertExerciseSchema.parse({
+        ...req.body,
+        userId: req.user.id
+      });
+      
+      const exercise = await storage.createExercise(validatedData);
+      
+      // Add XP for completing exercise
+      const xpPoints = validatedData.xpEarned || Math.round(validatedData.duration / 60 * 10); // 10 XP per minute
+      
+      const user = await storage.getUser(req.user.id);
+      if (user) {
+        // Update streak if this is a new day
+        const today = new Date().toDateString();
+        const lastActiveDay = user.lastActive ? new Date(user.lastActive).toDateString() : '';
+        
+        let streak = user.streak;
+        if (lastActiveDay !== today) {
+          streak += 1;
+        }
+        
+        await storage.updateUser(user.id, { 
+          xpPoints: user.xpPoints + xpPoints,
+          streak,
+          lastActive: new Date()
+        });
+        
+        // Check if user should level up (100 XP per level)
+        const newTotalXP = user.xpPoints + xpPoints;
+        const newLevel = Math.floor(newTotalXP / 100) + 1;
+        
+        if (newLevel > user.level) {
+          await storage.updateUser(user.id, { level: newLevel });
+        }
+      }
+      
+      res.status(201).json(exercise);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      res.status(500).json({ message: "Server error during exercise submission" });
+    }
+  });
+
+  app.get('/api/exercises', authenticate, async (req, res) => {
+    try {
+      const exercises = await storage.getExercisesByUserId(req.user.id);
+      res.json(exercises);
+    } catch (error) {
+      res.status(500).json({ message: "Server error fetching exercises" });
+    }
+  });
+
+  // Journal routes
+  app.post('/api/journals', authenticate, async (req, res) => {
+    try {
+      const validatedData = insertJournalSchema.parse({
+        ...req.body,
+        userId: req.user.id
+      });
+      
+      const journal = await storage.createJournal(validatedData);
+      
+      // Add XP for journaling
+      const user = await storage.getUser(req.user.id);
+      if (user) {
+        await storage.updateUser(user.id, { 
+          xpPoints: user.xpPoints + 15,
+          lastActive: new Date()
+        });
+      }
+      
+      res.status(201).json(journal);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      res.status(500).json({ message: "Server error during journal submission" });
+    }
+  });
+
+  app.get('/api/journals', authenticate, async (req, res) => {
+    try {
+      const journals = await storage.getJournalsByUserId(req.user.id);
+      res.json(journals);
+    } catch (error) {
+      res.status(500).json({ message: "Server error fetching journals" });
+    }
+  });
+
+  app.get('/api/journals/:id', authenticate, async (req, res) => {
+    try {
+      const journal = await storage.getJournalById(Number(req.params.id));
+      
+      if (!journal) {
+        return res.status(404).json({ message: "Journal not found" });
+      }
+      
+      if (journal.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized to access this journal" });
+      }
+      
+      res.json(journal);
+    } catch (error) {
+      res.status(500).json({ message: "Server error fetching journal" });
+    }
+  });
+
+  // Achievement routes
+  app.get('/api/achievements', authenticate, async (req, res) => {
+    try {
+      const achievements = await storage.getAchievementsByUserId(req.user.id);
+      res.json(achievements);
+    } catch (error) {
+      res.status(500).json({ message: "Server error fetching achievements" });
+    }
+  });
+
+  app.post('/api/achievements', authenticate, async (req, res) => {
+    try {
+      const validatedData = insertAchievementSchema.parse({
+        ...req.body,
+        userId: req.user.id
+      });
+      
+      const achievement = await storage.createAchievement(validatedData);
+      
+      // Add XP for achievement
+      const user = await storage.getUser(req.user.id);
+      if (user) {
+        await storage.updateUser(user.id, { 
+          xpPoints: user.xpPoints + 25,
+          lastActive: new Date()
+        });
+      }
+      
+      res.status(201).json(achievement);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      res.status(500).json({ message: "Server error during achievement submission" });
+    }
+  });
+
+  // Chat routes
+  app.get('/api/chat', authenticate, async (req, res) => {
+    try {
+      const messages = await storage.getChatMessagesByUserId(req.user.id);
+      res.json(messages);
+    } catch (error) {
+      res.status(500).json({ message: "Server error fetching chat messages" });
+    }
+  });
+
+  app.post('/api/chat', authenticate, async (req, res) => {
+    try {
+      const validatedData = insertChatMessageSchema.parse({
+        ...req.body,
+        userId: req.user.id,
+        isUserMessage: true
+      });
+      
+      const message = await storage.createChatMessage(validatedData);
+      
+      // Generate AI response using Gemini
+      try {
+        const messages = await storage.getChatMessagesByUserId(req.user.id);
+        
+        const chatHistory = messages.map(msg => ({
+          role: msg.isUserMessage ? "user" : "model",
+          parts: [{ text: msg.content }]
+        }));
+        
+        // Add system prompt to guide the AI
+        const systemPrompt = {
+          role: "model",
+          parts: [{ text: "I am MindBot, a CBT-focused wellness assistant. I provide supportive, empathetic guidance using cognitive behavioral therapy techniques to help users manage their mental health. I can suggest exercises like deep breathing, cognitive restructuring, gratitude practice, and mindfulness meditation. I'll avoid giving medical advice and focus on evidence-based CBT techniques while maintaining a calm, supportive tone." }]
+        };
+        
+        // Create chat session
+        const chat = model.startChat({
+          history: [systemPrompt, ...chatHistory]
+        });
+        
+        // Generate response to the user's message
+        const result = await chat.sendMessage(message.content);
+        const aiResponse = result.response.text();
+        
+        // Store AI response
+        const aiMessage = await storage.createChatMessage({
+          userId: req.user.id,
+          content: aiResponse,
+          isUserMessage: false
+        });
+        
+        res.status(201).json([message, aiMessage]);
+      } catch (genAiError) {
+        console.error("Error generating AI response:", genAiError);
+        
+        // Still return the user message even if AI response fails
+        res.status(201).json(message);
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      res.status(500).json({ message: "Server error during message submission" });
+    }
+  });
+
   return httpServer;
 }
