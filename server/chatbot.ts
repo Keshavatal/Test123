@@ -91,9 +91,9 @@ export async function generateChatbotResponse(userId: number, userMessage: strin
     }
     
     // Save the AI response to the database
-    await storage.saveChatMessage({
+    await storage.createChatMessage({
       userId,
-      isUser: false,
+      isUserMessage: false,
       content: response
     });
     
@@ -105,9 +105,9 @@ export async function generateChatbotResponse(userId: number, userMessage: strin
     const fallbackResponse = "I'm having trouble connecting right now. Let's try a simple breathing exercise: breathe in for 4 counts, hold for 2, then exhale for 6. How does that feel?";
     
     // Save the fallback response to the database
-    await storage.saveChatMessage({
+    await storage.createChatMessage({
       userId,
-      isUser: false,
+      isUserMessage: false,
       content: fallbackResponse
     });
     
