@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 210 100% 97%;
+    --foreground: 220 13% 28%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 28%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 28%;
+    
+    --primary: 206 70% 70%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 120 100% 80%;
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 220 8.9% 46.1%;
+    
+    --accent: 252 100% 95%;
+    --accent-foreground: 262 70% 50%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 206 70% 70%;
+    
+    --chart-1: 206 70% 70%;
+    --chart-2: 120 100% 80%;
+    --chart-3: 252 100% 95%;
+    --chart-4: 28 100% 75%;
+    --chart-5: 270 50% 70%;
+    
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-opensans antialiased bg-background text-foreground;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-quicksand;
+  }
+}
+
+@layer components {
+  .btn-hover-effect {
+    @apply transition-all duration-200 hover:translate-y-[-2px] hover:shadow-md;
+  }
+  
+  .app-card {
+    @apply transition-all duration-300 hover:translate-y-[-5px] hover:shadow-lg;
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  .animate-breathe {
+    animation: breathe 4s ease-in-out infinite;
+  }
+
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  @keyframes slideUp {
+    0% { transform: translateY(20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out;
+  }
+}
