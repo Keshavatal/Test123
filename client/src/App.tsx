@@ -14,15 +14,15 @@ import Journal from "@/pages/Journal";
 import Progress from "@/pages/Progress";
 import NotFound from "@/pages/not-found";
 
-// Exercise Pages
-import BreathingExercise from "@/pages/exercises/BreathingExercise";
-import MindfulnessMeditation from "@/pages/exercises/MindfulnessMeditation";
-import CognitiveRestructuring from "@/pages/exercises/CognitiveRestructuring";
-import GratitudePractice from "@/pages/exercises/GratitudePractice";
-import BoxBreathing from "@/pages/exercises/BoxBreathing";
-import ProgressiveRelaxation from "@/pages/exercises/ProgressiveRelaxation";
-import ThoughtRecord from "@/pages/exercises/ThoughtRecord";
-import ValuesClarification from "@/pages/exercises/ValuesClarification";
+// Exercise Pages - Using relative imports because these are not in the @/pages directory
+import BreathingExercise from "./pages/exercises/BreathingExercise";
+import MindfulnessMeditation from "./pages/exercises/MindfulnessMeditation";
+import CognitiveRestructuring from "./pages/exercises/CognitiveRestructuring";
+import GratitudePractice from "./pages/exercises/GratitudePractice";
+import BoxBreathing from "./pages/exercises/BoxBreathing";
+import ProgressiveRelaxation from "./pages/exercises/ProgressiveRelaxation";
+import ThoughtRecord from "./pages/exercises/ThoughtRecord";
+import ValuesClarification from "./pages/exercises/ValuesClarification";
 
 function Router() {
   return (

@@ -1,6 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { PenLine, Wind, Heart, Brain } from "lucide-react";
-import { Link } from "wouter";
 
 export interface ExerciseProps {
   id: string;
@@ -11,7 +10,12 @@ export interface ExerciseProps {
   path: string;
 }
 
-export default function ExerciseCard({ exercise }: { exercise: ExerciseProps }) {
+interface ExerciseCardProps {
+  exercise: ExerciseProps;
+  onStartExercise?: (exercise: ExerciseProps) => void;
+}
+
+export default function ExerciseCard({ exercise, onStartExercise }: ExerciseCardProps) {
   const getIcon = () => {
     switch (exercise.type) {
       case "cognitive":
@@ -27,25 +31,32 @@ export default function ExerciseCard({ exercise }: { exercise: ExerciseProps }) 
     }
   };
 
+  const handleClick = () => {
+    if (onStartExercise) {
+      onStartExercise(exercise);
+    }
+  };
+
   return (
-    <Link href={exercise.path}>
-      <Card className="bg-background rounded-xl p-5 hover:shadow-md transition duration-300 cursor-pointer group">
-        <CardContent className="p-0">
-          <div className="flex justify-between items-start mb-3">
-            <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center">
-              {getIcon()}
-            </div>
-            <span className="text-xs font-quicksand bg-primary bg-opacity-20 text-primary px-2 py-1 rounded-full">
-              {exercise.duration} min
-            </span>
+    <Card 
+      className="bg-background rounded-xl p-5 hover:shadow-md transition duration-300 cursor-pointer group"
+      onClick={handleClick}
+    >
+      <CardContent className="p-0">
+        <div className="flex justify-between items-start mb-3">
+          <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center">
+            {getIcon()}
           </div>
-          <h4 className="font-quicksand font-semibold text-lg mb-1">{exercise.title}</h4>
-          <p className="text-sm text-textColor opacity-80 mb-3">{exercise.description}</p>
-          <button className="text-primary text-sm font-quicksand font-medium group-hover:underline">
-            Start exercise <span className="inline-block ml-1 transform group-hover:translate-x-1 transition duration-300">→</span>
-          </button>
-        </CardContent>
-      </Card>
-    </Link>
+          <span className="text-xs font-quicksand bg-primary bg-opacity-20 text-primary px-2 py-1 rounded-full">
+            {exercise.duration} min
+          </span>
+        </div>
+        <h4 className="font-quicksand font-semibold text-lg mb-1">{exercise.title}</h4>
+        <p className="text-sm text-textColor opacity-80 mb-3">{exercise.description}</p>
+        <button className="text-primary text-sm font-quicksand font-medium group-hover:underline">
+          Start exercise <span className="inline-block ml-1 transform group-hover:translate-x-1 transition duration-300">→</span>
+        </button>
+      </CardContent>
+    </Card>
   );
 }

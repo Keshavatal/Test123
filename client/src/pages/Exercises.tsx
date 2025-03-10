@@ -5,34 +5,19 @@ import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ExerciseCard, { ExerciseProps } from "@/components/dashboard/ExerciseCard";
-import BreathingExercise from "@/components/exercises/BreathingExercise";
-import CognitiveRestructuring from "@/components/exercises/CognitiveRestructuring";
-import GratitudePractice from "@/components/exercises/GratitudePractice";
-import MindfulnessMeditation from "@/components/exercises/MindfulnessMeditation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { SearchIcon, Brain, Wind, Heart, PenLine } from "lucide-react";
 
 export default function Exercises() {
   const { user, isLoading: authLoading } = useAuth();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeExercise, setActiveExercise] = useState<string | null>(null);
   
-  const { data: exercises, isLoading: exercisesLoading } = useQuery({
+  const { data: exerciseHistory, isLoading: exercisesLoading } = useQuery({
     queryKey: ['/api/exercises'],
     enabled: !!user
   });
-
-  // Get exercise from URL path
-  useEffect(() => {
-    const path = location.split('/');
-    if (path.length > 2) {
-      setActiveExercise(path[2]);
-    } else {
-      setActiveExercise(null);
-    }
-  }, [location]);
 
   // Define exercise categories and all available exercises
   const allExercises: ExerciseProps[] = [
@@ -116,20 +101,9 @@ export default function Exercises() {
     });
   };
 
-  // Render active exercise component
-  const renderActiveExercise = () => {
-    switch (activeExercise) {
-      case "breathing":
-        return <BreathingExercise />;
-      case "cognitive":
-        return <CognitiveRestructuring />;
-      case "gratitude":
-        return <GratitudePractice />;
-      case "mindfulness":
-        return <MindfulnessMeditation />;
-      default:
-        return null;
-    }
+  // Function to handle exercise selection
+  const handleExerciseSelect = (path: string) => {
+    setLocation(path);
   };
 
   if (authLoading) {
@@ -139,19 +113,6 @@ export default function Exercises() {
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-lg font-quicksand">Loading...</p>
         </div>
-      </div>
-    );
-  }
-
-  // If an exercise is active, show that exercise
-  if (activeExercise) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          {renderActiveExercise()}
-        </main>
-        <Footer />
       </div>
     );
   }
@@ -199,7 +160,11 @@ export default function Exercises() {
             <TabsContent value="all" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {getFilteredExercises("all").map((exercise) => (
-                  <ExerciseCard key={exercise.id} exercise={exercise} />
+                  <ExerciseCard 
+                    key={exercise.id} 
+                    exercise={exercise} 
+                    onStartExercise={() => handleExerciseSelect(exercise.path)}
+                  />
                 ))}
               </div>
             </TabsContent>
@@ -207,7 +172,11 @@ export default function Exercises() {
             <TabsContent value="cognitive" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {getFilteredExercises("cognitive").map((exercise) => (
-                  <ExerciseCard key={exercise.id} exercise={exercise} />
+                  <ExerciseCard 
+                    key={exercise.id} 
+                    exercise={exercise} 
+                    onStartExercise={() => handleExerciseSelect(exercise.path)}
+                  />
                 ))}
               </div>
             </TabsContent>
@@ -215,7 +184,11 @@ export default function Exercises() {
             <TabsContent value="breathing" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {getFilteredExercises("breathing").map((exercise) => (
-                  <ExerciseCard key={exercise.id} exercise={exercise} />
+                  <ExerciseCard 
+                    key={exercise.id} 
+                    exercise={exercise} 
+                    onStartExercise={() => handleExerciseSelect(exercise.path)}
+                  />
                 ))}
               </div>
             </TabsContent>
@@ -223,7 +196,11 @@ export default function Exercises() {
             <TabsContent value="gratitude" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {getFilteredExercises("gratitude").map((exercise) => (
-                  <ExerciseCard key={exercise.id} exercise={exercise} />
+                  <ExerciseCard 
+                    key={exercise.id} 
+                    exercise={exercise} 
+                    onStartExercise={() => handleExerciseSelect(exercise.path)}
+                  />
                 ))}
               </div>
             </TabsContent>
@@ -231,7 +208,11 @@ export default function Exercises() {
             <TabsContent value="mindfulness" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {getFilteredExercises("mindfulness").map((exercise) => (
-                  <ExerciseCard key={exercise.id} exercise={exercise} />
+                  <ExerciseCard 
+                    key={exercise.id} 
+                    exercise={exercise} 
+                    onStartExercise={() => handleExerciseSelect(exercise.path)}
+                  />
                 ))}
               </div>
             </TabsContent>
