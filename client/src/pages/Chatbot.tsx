@@ -149,18 +149,3 @@ function Chatbot() {
 }
 
 export default Chatbot;
-import React from 'react';
-
-function Chatbot() {
-  return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Therapy Chatbot</h1>
-      <div className="bg-white rounded-lg shadow p-6">
-        <p className="mb-4">Chat with our AI assistant to get support and guidance.</p>
-        {/* Implement chatbot UI here */}
-      </div>
-    </div>
-  );
-}
-
-export default Chatbot;
