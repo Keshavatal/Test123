@@ -30,10 +30,14 @@ import MeditationTimer from "./pages/MeditationTimer";
 import Goals from "./pages/Goals";
 import AffirmationGenerator from "./pages/AffirmationGenerator";
 import WeeklyReport from "./pages/WeeklyReport";
+import Profile from "./pages/Profile"; // Added import for Profile page
+import NewJournalEntry from "./pages/NewJournalEntry"; // Added import for NewJournalEntry
+import JournalEntry from "./pages/JournalEntry"; // Added import for JournalEntry
+import MoodTracker from "./pages/MoodTracker"; // Added import for MoodTracker
 
 
 // Import PrivateRoute component
-import PrivateRoute from './components/PrivateRoute';
+import PrivateRoute from './components/auth/PrivateRoute';
 
 function Router() {
   return (
@@ -114,3 +118,43 @@ function App() {
 }
 
 export default App;
+
+//Necessary files created to resolve import errors.  These are placeholders and need to be filled in with the actual application logic.
+// lib/api/index.js (or .ts)
+export const api = {
+  // Add your API functions here
+};
+
+//components/auth/PrivateRoute.jsx (or .tsx)
+import React from 'react';
+import { Route, Redirect } from 'wouter';
+import { useAuth } from '../../context/AuthContext';
+
+export const PrivateRoute = ({ children, ...rest }) => {
+  const { currentUser } = useAuth();
+  return (
+    <Route {...rest} element={currentUser ? children : <Redirect to="/login" />} />
+  );
+};
+
+
+// components/Chatbot.jsx (or .tsx)
+import React from 'react';
+
+export const Chatbot = () => {
+  return (
+    <div>
+      <h1>Chatbot Placeholder</h1>
+    </div>
+  );
+};
+
+//Placeholder components - replace with actual implementations.
+//pages/Profile.jsx (or .tsx)
+const Profile = () => <div>Profile Page</div>;
+//pages/NewJournalEntry.jsx (or .tsx)
+const NewJournalEntry = () => <div>New Journal Entry Page</div>;
+//pages/JournalEntry.jsx (or .tsx)
+const JournalEntry = () => <div>Journal Entry Page</div>;
+//pages/MoodTracker.jsx (or .tsx)
+const MoodTracker = () => <div>Mood Tracker Page</div>;
