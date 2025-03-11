@@ -7,9 +7,9 @@
     "email": "demo@example.com",
     "initialAssessmentCompleted": true,
     "id": 1,
-    "xpPoints": 0,
+    "xpPoints": 10,
     "level": 1,
     "streak": 0,
-    "lastActive": "2025-03-11T09:08:00.840Z"
+    "lastActive": "2025-03-11T12:35:04.173Z"
   }
 ]

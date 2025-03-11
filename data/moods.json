@@ -6,5 +6,13 @@
     "notes": "Feeling good today",
     "id": 1,
     "createdAt": "2025-03-11T09:08:00.842Z"
+  },
+  {
+    "userId": 1,
+    "mood": "neutral",
+    "intensity": 3,
+    "notes": "",
+    "id": 2,
+    "createdAt": "2025-03-11T12:35:04.173Z"
   }
 ]
