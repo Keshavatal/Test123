@@ -1,3 +1,6 @@
+
+import fs from 'fs';
+import path from 'path';
 import {
   users, User, InsertUser,
   moods, Mood, InsertMood,
@@ -42,7 +45,8 @@ export interface IStorage {
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
 }
 
-export class MemStorage implements IStorage {
+export class FileStorage implements IStorage {
+  private dataDir: string;
   private users: Map<number, User>;
   private moods: Map<number, Mood>;
   private exercises: Map<number, Exercise>;
@@ -60,6 +64,14 @@ export class MemStorage implements IStorage {
   private currentChatMessageId: number;
 
   constructor() {
+    this.dataDir = path.join(process.cwd(), 'data');
+    
+    // Ensure data directory exists
+    if (!fs.existsSync(this.dataDir)) {
+      fs.mkdirSync(this.dataDir, { recursive: true });
+    }
+    
+    // Initialize maps and load data
     this.users = new Map();
     this.moods = new Map();
     this.exercises = new Map();
@@ -68,13 +80,60 @@ export class MemStorage implements IStorage {
     this.assessments = new Map();
     this.chatMessages = new Map();
 
-    this.currentUserId = 1;
-    this.currentMoodId = 1;
-    this.currentExerciseId = 1;
-    this.currentJournalId = 1;
-    this.currentAchievementId = 1;
-    this.currentAssessmentId = 1;
-    this.currentChatMessageId = 1;
+    this.loadData();
+    
+    // Set initial IDs
+    this.currentUserId = this.getNextId(this.users);
+    this.currentMoodId = this.getNextId(this.moods);
+    this.currentExerciseId = this.getNextId(this.exercises);
+    this.currentJournalId = this.getNextId(this.journals);
+    this.currentAchievementId = this.getNextId(this.achievements);
+    this.currentAssessmentId = this.getNextId(this.assessments);
+    this.currentChatMessageId = this.getNextId(this.chatMessages);
+  }
+
+  private getNextId(map: Map<number, any>): number {
+    if (map.size === 0) return 1;
+    return Math.max(...Array.from(map.keys())) + 1;
+  }
+
+  private loadData(): void {
+    this.loadCollection('users', this.users);
+    this.loadCollection('moods', this.moods);
+    this.loadCollection('exercises', this.exercises);
+    this.loadCollection('journals', this.journals);
+    this.loadCollection('achievements', this.achievements);
+    this.loadCollection('assessments', this.assessments);
+    this.loadCollection('chatMessages', this.chatMessages);
+  }
+
+  private loadCollection(filename: string, map: Map<number, any>): void {
+    const filePath = path.join(this.dataDir, `${filename}.json`);
+    
+    if (fs.existsSync(filePath)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        
+        for (const item of data) {
+          if (item && typeof item.id === 'number') {
+            map.set(item.id, item);
+          }
+        }
+      } catch (error) {
+        console.error(`Error loading ${filename}:`, error);
+      }
+    }
+  }
+
+  private saveCollection(filename: string, map: Map<number, any>): void {
+    const filePath = path.join(this.dataDir, `${filename}.json`);
+    
+    try {
+      const data = Array.from(map.values());
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+    } catch (error) {
+      console.error(`Error saving ${filename}:`, error);
+    }
   }
 
   // User operations
@@ -103,9 +162,11 @@ export class MemStorage implements IStorage {
       xpPoints: 0,
       level: 1,
       streak: 0,
-      lastActive: now
+      lastActive: now,
+      initialAssessmentCompleted: false
     };
     this.users.set(id, user);
+    this.saveCollection('users', this.users);
     return user;
   }
 
@@ -115,6 +176,7 @@ export class MemStorage implements IStorage {
 
     const updatedUser = { ...user, ...updates };
     this.users.set(id, updatedUser);
+    this.saveCollection('users', this.users);
     return updatedUser;
   }
 
@@ -133,6 +195,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
     this.moods.set(id, mood);
+    this.saveCollection('moods', this.moods);
     return mood;
   }
 
@@ -152,6 +215,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
     this.exercises.set(id, exercise);
+    this.saveCollection('exercises', this.exercises);
     return exercise;
   }
 
@@ -174,6 +238,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
     this.journals.set(id, journal);
+    this.saveCollection('journals', this.journals);
     return journal;
   }
 
@@ -192,6 +257,7 @@ export class MemStorage implements IStorage {
       earnedAt: new Date()
     };
     this.achievements.set(id, achievement);
+    this.saveCollection('achievements', this.achievements);
     return achievement;
   }
 
@@ -209,6 +275,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
     this.assessments.set(id, assessment);
+    this.saveCollection('assessments', this.assessments);
     return assessment;
   }
 
@@ -227,8 +294,10 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
     this.chatMessages.set(id, message);
+    this.saveCollection('chatMessages', this.chatMessages);
     return message;
   }
 }
 
-export const storage = new MemStorage();
+// Change to use FileStorage
+export const storage = new FileStorage();
