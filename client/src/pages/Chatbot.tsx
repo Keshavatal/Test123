@@ -226,3 +226,34 @@ export default function Chatbot() {
     </div>
   );
 }
+import React from 'react';
+
+function Chatbot() {
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Mental Health Chatbot</h1>
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="mb-4 h-64 overflow-y-auto border rounded p-2">
+          {/* Chat messages will appear here */}
+          <div className="mb-2">
+            <div className="bg-blue-100 p-2 rounded-lg inline-block">
+              Hello! How can I help you with your mental health today?
+            </div>
+          </div>
+        </div>
+        <div className="flex">
+          <input 
+            type="text" 
+            className="flex-1 p-2 border rounded-l"
+            placeholder="Type your message here..."
+          />
+          <button className="bg-blue-500 text-white p-2 rounded-r">
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Chatbot;

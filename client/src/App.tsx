@@ -24,7 +24,7 @@ import ProgressiveRelaxation from "./pages/exercises/ProgressiveRelaxation";
 import ThoughtRecord from "./pages/exercises/ThoughtRecord";
 import ValuesClarification from "./pages/exercises/ValuesClarification";
 import ExerciseChatbot from "./pages/ExerciseChatbot"; // Added import
-
+import Chatbot from "./pages/Chatbot"; // Import Chatbot component
 
 // Import PrivateRoute component
 import PrivateRoute from './components/PrivateRoute';
