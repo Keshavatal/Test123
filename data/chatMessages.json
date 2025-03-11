@@ -47,5 +47,47 @@
     "isUserMessage": true,
     "id": 7,
     "createdAt": "2025-03-11T09:09:57.620Z"
+  },
+  {
+    "userId": 1,
+    "content": "hi",
+    "isUserMessage": true,
+    "id": 8,
+    "createdAt": "2025-03-11T12:31:53.720Z"
+  },
+  {
+    "userId": 1,
+    "content": "Hi there.  It sounds like you're looking for a breathing exercise.  I can guide you through a simple one called box breathing:\n\n1. **Inhale:** Breathe in slowly and deeply through your nose for a count of four.  Imagine filling your lungs from the bottom up.\n2. **Hold:** Hold your breath for a count of four.\n3. **Exhale:** Slowly exhale through your mouth for a count of four.  Imagine all the tension leaving your body.\n4. **Hold:** Hold your breath again for a count of four.\n\nRepeat this cycle for a few minutes.  Focus on the sensation of your breath entering and leaving your body.  This exercise can help calm your nervous system and bring a sense of peace and focus.\n\nWould you like to try it together now, or would you prefer a different exercise or to talk about what's making you sad?\n",
+    "isUserMessage": false,
+    "id": 9,
+    "createdAt": "2025-03-11T12:31:57.551Z"
+  },
+  {
+    "userId": 1,
+    "content": "yes",
+    "isUserMessage": true,
+    "id": 10,
+    "createdAt": "2025-03-11T12:32:21.987Z"
+  },
+  {
+    "userId": 1,
+    "content": "Okay, let's try box breathing together now.  I'll guide you through it.\n\nReady?\n\nBreathe in slowly through your nose for a count of four...  (Imagine your lungs filling from bottom to top).\n\nHold your breath for a count of four...\n\nExhale slowly through your mouth for a count of four... (Imagine tension leaving your body).\n\nHold your breath for a count of four...\n\n\nNow repeat that cycle a few more times.  I'll be here quietly while you do so.  Focus on your breath.\n\n\nLet me know when you've finished a few rounds.  How are you feeling?\n",
+    "isUserMessage": false,
+    "id": 11,
+    "createdAt": "2025-03-11T12:32:24.692Z"
+  },
+  {
+    "userId": 1,
+    "content": "i am depressed",
+    "isUserMessage": true,
+    "id": 12,
+    "createdAt": "2025-03-11T12:33:01.297Z"
+  },
+  {
+    "userId": 1,
+    "content": "I hear you.  It sounds like you're going through a difficult time.  Depression can be a heavy burden to carry, and I want you to know that you're not alone.  Many people experience depression, and there are ways to find support and feel better.\n\nWhile I can't provide medical advice or diagnosis, I can offer some coping strategies based on Cognitive Behavioral Therapy (CBT) that might be helpful.  Would you be open to trying some of these techniques?  \n\nWe could also talk more about what's contributing to your feeling depressed.  Sometimes, just talking about it can help.  Remember, I'm here to listen without judgment.\n\nWhich would you prefer right now - trying some coping techniques or talking about what's happening?\n",
+    "isUserMessage": false,
+    "id": 13,
+    "createdAt": "2025-03-11T12:33:04.573Z"
   }
 ]
