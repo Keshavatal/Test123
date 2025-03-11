@@ -1,16 +1,16 @@
 
 import { ReactNode } from 'react';
-import { useLocation, Redirect } from 'wouter';
+import { Route, Redirect } from 'wouter';
 import { useAuth } from '../../context/AuthContext';
 import { Spinner } from '../ui/spinner';
 
 interface PrivateRouteProps {
+  path: string;
   children: ReactNode;
 }
 
-export function PrivateRoute({ children }: PrivateRouteProps) {
+export default function PrivateRoute({ path, children }: PrivateRouteProps) {
   const { user, loading } = useAuth();
-  const [, navigate] = useLocation();
 
   if (loading) {
     return (
@@ -20,9 +20,9 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
     );
   }
 
-  if (!user) {
-    return <Redirect to="/login" />;
-  }
-
-  return <>{children}</>;
+  return (
+    <Route path={path}>
+      {user ? children : <Redirect to="/login" />}
+    </Route>
+  );
 }

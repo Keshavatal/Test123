@@ -38,6 +38,7 @@ import MoodTracker from "./pages/MoodTracker"; // Added import for MoodTracker
 
 // Import PrivateRoute component
 import PrivateRoute from './components/auth/PrivateRoute';
+import Chatbot from './components/Chatbot';
 
 function Router() {
   return (
