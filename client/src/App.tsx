@@ -23,6 +23,8 @@ import BoxBreathing from "./pages/exercises/BoxBreathing";
 import ProgressiveRelaxation from "./pages/exercises/ProgressiveRelaxation";
 import ThoughtRecord from "./pages/exercises/ThoughtRecord";
 import ValuesClarification from "./pages/exercises/ValuesClarification";
+import ExerciseChatbot from "./pages/ExerciseChatbot"; // Added import
+
 
 function Router() {
   return (
@@ -34,7 +36,7 @@ function Router() {
       <Route path="/exercises" component={Exercises} />
       <Route path="/journal" component={Journal} />
       <Route path="/progress" component={Progress} />
-      
+
       {/* Exercise Routes */}
       <Route path="/exercises/breathing" component={BreathingExercise} />
       <Route path="/exercises/mindfulness" component={MindfulnessMeditation} />
@@ -44,7 +46,18 @@ function Router() {
       <Route path="/exercises/progressive-relaxation" component={ProgressiveRelaxation} />
       <Route path="/exercises/thought-record" component={ThoughtRecord} />
       <Route path="/exercises/values-clarification" component={ValuesClarification} />
-      
+
+      <Route path="/chatbot"> {/* Existing route */}
+        <PrivateRoute>
+          <Chatbot />
+        </PrivateRoute>
+      </Route>
+      <Route path="/exercise-chatbot"> {/* Added route */}
+        <PrivateRoute>
+          <ExerciseChatbot />
+        </PrivateRoute>
+      </Route>
+
       <Route component={NotFound} />
     </Switch>
   );
