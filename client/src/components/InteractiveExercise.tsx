@@ -229,6 +229,35 @@ export function InteractiveExercise({
         </CardHeader>
         
         <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Animation visualization for exercises */}
+          {showAnimation && (
+            <div className="w-full h-56 mb-6 rounded-lg overflow-hidden bg-accent/5 backdrop-blur-sm flex items-center justify-center">
+              {exerciseType === "breathing" && (
+                <BreathingAnimation
+                  isPlaying={isPlaying}
+                  phase={breathingPhase}
+                  progress={(timer % 14) / 14 * 100}
+                />
+              )}
+              {exerciseType === "mindfulness" && (
+                <MindfulnessAnimation
+                  isPlaying={isPlaying}
+                  duration={8}
+                />
+              )}
+              {(exerciseType !== "breathing" && exerciseType !== "mindfulness") && (
+                <div className="text-center p-4">
+                  <div className="text-xl font-medium mb-2">
+                    {exerciseType.charAt(0).toUpperCase() + exerciseType.slice(1)} Exercise
+                  </div>
+                  <p className="text-muted-foreground">
+                    Follow the instructions from your wellness coach.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {messages.map((message, index) => (
             <div
               key={index}
