@@ -150,3 +150,92 @@ export default function Header() {
     </header>
   );
 }
+import React from "react";
+import { Link } from "wouter";
+import { ModeToggle } from "@/components/ui/mode-toggle";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { ChatbotDialog } from "@/components/ChatbotDialog";
+
+export default function Header() {
+  const { user, logout } = useAuth();
+
+  return (
+    <header className="border-b">
+      <div className="container flex h-16 items-center justify-between">
+        <div className="flex items-center gap-8">
+          <Link href="/">
+            <a className="font-bold text-xl">MindWell</a>
+          </Link>
+          {user && (
+            <nav className="flex items-center gap-4">
+              <Link href="/dashboard">
+                <a className="text-sm font-medium hover:underline">Dashboard</a>
+              </Link>
+              <Link href="/journal">
+                <a className="text-sm font-medium hover:underline">Journal</a>
+              </Link>
+              <Link href="/exercises">
+                <a className="text-sm font-medium hover:underline">Exercises</a>
+              </Link>
+              <ChatbotDialog />
+            </nav>
+          )}
+        </div>
+        <div className="flex items-center gap-4">
+          <ModeToggle />
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>{user.firstName?.charAt(0)}{user.lastName?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">
+                    <a className="w-full cursor-pointer">Profile</a>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">
+                    <a className="w-full cursor-pointer">Settings</a>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={logout}>
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="flex gap-2">
+              <Button variant="outline" asChild>
+                <Link href="/login">
+                  <a>Login</a>
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link href="/register">
+                  <a>Register</a>
+                </Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
