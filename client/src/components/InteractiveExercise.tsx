@@ -39,16 +39,23 @@ export function InteractiveExercise({
   const speechSynthesisRef = useRef<SpeechSynthesis | null>(
     typeof window !== "undefined" ? window.speechSynthesis : null
   );
-  
+
+  const breathingAnimations = {
+    inhale: { duration: 4 },
+    hold: { duration: 4 },
+    exhale: { duration: 4 },
+    rest: { duration: 2 },
+  };
+
   // Exercise completion mutation
   const completeMutation = useMutation({
     mutationFn: async () => {
       if (!user) return;
-      
+
       // Calculate duration in seconds
       const durationInSeconds = Math.max(30, timer); // Minimum 30 seconds
       const xp = Math.max(10, Math.min(50, Math.floor(durationInSeconds / 10))); // 10-50 XP based on duration
-      
+
       return apiRequest("POST", "/api/exercises", {
         userId: user.id,
         type: exerciseType,
@@ -62,7 +69,7 @@ export function InteractiveExercise({
         title: "Exercise Completed!",
         description: "Great job! You've earned XP points for your practice.",
       });
-      
+
       onComplete();
     },
     onError: (error: Error) => {
@@ -73,22 +80,80 @@ export function InteractiveExercise({
       });
     },
   });
-  
+
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
-  
+
+  // Breathing exercise animation and timing logic
+  useEffect(() => {
+    if (!isPlaying || exerciseType !== "breathing") return;
+
+    const cycleDuration = 
+      breathingAnimations.inhale.duration + 
+      breathingAnimations.hold.duration + 
+      breathingAnimations.exhale.duration + 
+      breathingAnimations.rest.duration;
+
+    let timeInPhase = 0;
+    let currentPhaseTime = breathingAnimations[breathingPhase].duration;
+
+    const interval = setInterval(() => {
+      timeInPhase += 1;
+      setTimer(prev => prev + 1);
+
+      // Move to next phase when current phase completes
+      if (timeInPhase >= currentPhaseTime) {
+        timeInPhase = 0;
+
+        // Update breathing phase
+        if (breathingPhase === "inhale") {
+          setBreathingPhase("hold");
+          if (audioEnabled && speechSynthesisRef.current) {
+            const utterance = new SpeechSynthesisUtterance("Hold");
+            speechSynthesisRef.current.speak(utterance);
+          }
+          currentPhaseTime = breathingAnimations.hold.duration;
+        } else if (breathingPhase === "hold") {
+          setBreathingPhase("exhale");
+          if (audioEnabled && speechSynthesisRef.current) {
+            const utterance = new SpeechSynthesisUtterance("Exhale");
+            speechSynthesisRef.current.speak(utterance);
+          }
+          currentPhaseTime = breathingAnimations.exhale.duration;
+        } else if (breathingPhase === "exhale") {
+          setBreathingPhase("rest");
+          currentPhaseTime = breathingAnimations.rest.duration;
+        } else {
+          setBreathingPhase("inhale");
+          if (audioEnabled && speechSynthesisRef.current) {
+            const utterance = new SpeechSynthesisUtterance("Inhale");
+            speechSynthesisRef.current.speak(utterance);
+          }
+          currentPhaseTime = breathingAnimations.inhale.duration;
+        }
+      }
+
+      // Update progress
+      const totalTime = maxTime === 0 ? 300 : maxTime; // Default 5 minutes
+      setProgress(Math.min(100, (timer / totalTime) * 100));
+
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, breathingPhase, exerciseType, audioEnabled, timer, maxTime]);
+
   // Set up timer and progress tracking
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     if (isPlaying) {
       interval = setInterval(() => {
         setTimer(prevTimer => prevTimer + 1);
-        
+
         // Update progress based on exercise type's typical duration
         // Different exercises have different expected durations
         if (maxTime > 0) {
@@ -96,27 +161,12 @@ export function InteractiveExercise({
           setProgress(newProgress);
         }
 
-        // For breathing exercises, cycle through the phases
-        if (exerciseType === "breathing") {
-          // Each complete breath cycle is 14 seconds (4-4-4-2)
-          const secondsInCycle = timer % 14;
-          
-          if (secondsInCycle < 4) {
-            setBreathingPhase("inhale");
-          } else if (secondsInCycle < 8) {
-            setBreathingPhase("hold");
-          } else if (secondsInCycle < 12) {
-            setBreathingPhase("exhale");
-          } else {
-            setBreathingPhase("rest");
-          }
-        }
       }, 1000);
     }
-    
+
     return () => clearInterval(interval);
   }, [isPlaying, timer, maxTime, exerciseType]);
-  
+
   // Determine max time based on exercise type for progress calculation
   useEffect(() => {
     switch (exerciseType) {
@@ -136,31 +186,31 @@ export function InteractiveExercise({
         setMaxTime(300); // 5 minutes
     }
   }, [exerciseType]);
-  
+
   // Text-to-speech functionality for voice guidance
   const speakMessage = (text: string) => {
     if (!audioEnabled || !speechSynthesisRef.current) return;
-    
+
     speechSynthesisRef.current.cancel(); // Stop any current speech
-    
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.9; // Slightly slower for clarity
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
-    
+
     // Try to find a calm, clear voice
     const voices = speechSynthesisRef.current.getVoices();
     const preferredVoice = voices.find(voice => 
       voice.name.includes("Female") || voice.name.includes("Samantha")
     );
-    
+
     if (preferredVoice) {
       utterance.voice = preferredVoice;
     }
-    
+
     speechSynthesisRef.current.speak(utterance);
   };
-  
+
   // Speak bot messages when they arrive
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
@@ -168,23 +218,23 @@ export function InteractiveExercise({
       speakMessage(lastMessage.content);
     }
   }, [messages]);
-  
+
   // Handle user input submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!userInput.trim()) return;
-    
+
     onSendMessage(userInput);
     setUserInput("");
   };
-  
+
   // Format time for display (MM:SS)
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
-  
+
   // Progress indicator based on timer
   const getProgressIndicator = () => {
     if (progress < 25) return "Starting exercise...";
@@ -193,7 +243,7 @@ export function InteractiveExercise({
     if (progress < 100) return "Almost there...";
     return "Exercise complete!";
   };
-  
+
   return (
     <div className="flex flex-col h-full">
       <Card className="flex-1 flex flex-col mb-4 overflow-hidden">
@@ -227,7 +277,7 @@ export function InteractiveExercise({
           </div>
           <p className="text-xs text-muted-foreground">{getProgressIndicator()}</p>
         </CardHeader>
-        
+
         <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Animation visualization for exercises */}
           {showAnimation && (
@@ -281,7 +331,7 @@ export function InteractiveExercise({
           ))}
           <div ref={messagesEndRef} />
         </CardContent>
-        
+
         <CardFooter className="border-t p-3">
           <form onSubmit={handleSubmit} className="w-full flex flex-col gap-3">
             <div className="flex gap-2 items-center">
@@ -294,7 +344,7 @@ export function InteractiveExercise({
               >
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               </Button>
-              
+
               <Button
                 type="button"
                 size="icon"
@@ -305,14 +355,14 @@ export function InteractiveExercise({
               >
                 <FastForward className="h-4 w-4" />
               </Button>
-              
+
               <Textarea
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
                 placeholder="Type your response..."
                 className="flex-1 h-10 min-h-0 resize-none py-2"
               />
-              
+
               <Button type="submit" size="sm" disabled={!userInput.trim()}>
                 Send
               </Button>
