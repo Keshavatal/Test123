@@ -1,0 +1,11 @@
+[
+  {
+    "userId": 1,
+    "type": "Meditation",
+    "duration": 600,
+    "notes": "Morning meditation session",
+    "id": 1,
+    "completed": true,
+    "createdAt": "2025-03-11T09:08:00.842Z"
+  }
+]

@@ -1,0 +1,37 @@
+[
+  {
+    "userId": 1,
+    "responses": {
+      "anxietyLevel": 3,
+      "depressionLevel": 2,
+      "sleepQuality": 4,
+      "stressLevel": 3,
+      "selfEsteem": 4,
+      "goals": [
+        "reduce stress",
+        "improve mood"
+      ]
+    },
+    "score": 65,
+    "id": 1,
+    "createdAt": "2025-03-11T09:08:00.841Z"
+  },
+  {
+    "userId": 1,
+    "responses": {
+      "1": 1,
+      "2": 2,
+      "3": 1,
+      "4": 3,
+      "5": 2,
+      "6": 0,
+      "7": 3,
+      "8": 2,
+      "9": 0,
+      "10": 1
+    },
+    "score": 50,
+    "id": 2,
+    "createdAt": "2025-03-11T09:08:59.150Z"
+  }
+]

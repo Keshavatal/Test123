@@ -1,0 +1,51 @@
+[
+  {
+    "userId": 1,
+    "content": "Start",
+    "isUserMessage": true,
+    "id": 1,
+    "createdAt": "2025-03-11T09:09:00.523Z"
+  },
+  {
+    "userId": 1,
+    "content": "Okay, let's begin. How are you feeling today?  It's helpful for me to understand what's on your mind so I can offer the best support.\n",
+    "isUserMessage": false,
+    "id": 2,
+    "createdAt": "2025-03-11T09:09:01.768Z"
+  },
+  {
+    "userId": 1,
+    "content": "hi",
+    "isUserMessage": true,
+    "id": 3,
+    "createdAt": "2025-03-11T09:09:08.938Z"
+  },
+  {
+    "userId": 1,
+    "content": "Hi there. How are you doing today?\n",
+    "isUserMessage": false,
+    "id": 4,
+    "createdAt": "2025-03-11T09:09:09.650Z"
+  },
+  {
+    "userId": 1,
+    "content": "I am sad, ",
+    "isUserMessage": true,
+    "id": 5,
+    "createdAt": "2025-03-11T09:09:33.431Z"
+  },
+  {
+    "userId": 1,
+    "content": "I'm sorry to hear you're feeling sad.  It takes courage to acknowledge and share these feelings.  Could you tell me a little more about what's making you feel this way?  Even small details can be helpful.  There's no pressure to share anything you're not comfortable with, but the more information I have, the better I can understand and support you.\n",
+    "isUserMessage": false,
+    "id": 6,
+    "createdAt": "2025-03-11T09:09:35.168Z"
+  },
+  {
+    "userId": 1,
+    "content": "breathing exercise ",
+    "isUserMessage": true,
+    "id": 7,
+    "createdAt": "2025-03-11T09:09:57.620Z"
+  }
+]

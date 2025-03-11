@@ -1,0 +1,10 @@
+[
+  {
+    "userId": 1,
+    "title": "First day",
+    "content": "This is my first journal entry in the app. Looking forward to tracking my progress!",
+    "mood": "Hopeful",
+    "id": 1,
+    "createdAt": "2025-03-11T09:08:00.842Z"
+  }
+]
