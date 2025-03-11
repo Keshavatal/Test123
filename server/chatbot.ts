@@ -71,14 +71,14 @@ export async function generateChatbotResponse(userId: number, userMessage: strin
     const chatHistory = await storage.getChatMessagesByUserId(userId);
     // Only use the last 10 messages for context
     const recentMessages = chatHistory.slice(-10);
-    
+
     let response: string;
-    
+
     // If the API key is available, use the Gemini API
     if (genAI) {
       // Create a generative model
       const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-      
+
       // Start chat session with appropriate configuration
       const chat = model.startChat({
         generationConfig: {
@@ -87,69 +87,61 @@ export async function generateChatbotResponse(userId: number, userMessage: strin
         },
         // No history here - we'll add it properly below
       });
-      
+
       // Handle chat history in a way that ensures proper formatting
       if (recentMessages.length === 0) {
         // For a new conversation, first send a user message
         await chat.sendMessage("I'd like help with my mental health.");
-        
+
         // Then prime the model with the system message
         await chat.sendMessage(systemMessage);
-        
+
         // Finally send the actual user message
         await chat.sendMessage(userMessage);
       } else {
-        // For existing conversations, replay the history in order
-        let hasSystemMessage = false;
-        
+        // For existing conversations, first send the system message to set the context
+        await chat.sendMessage(systemMessage);
+
+        // Then replay the chat history in order
         for (const msg of recentMessages) {
-          // Send messages in order, ensuring we maintain the correct alternating pattern
-          if (msg.isUserMessage) {
-            await chat.sendMessage(msg.content);
-          } else if (!hasSystemMessage) {
-            // Only send the system message once
-            hasSystemMessage = true;
-            await chat.sendMessage(systemMessage);
-          }
+          // Send messages in order, maintaining the correct alternating pattern
+          await chat.sendMessage(msg.content);
         }
-        
-        // Finally, send the current user message if it's not already in the history
-        if (!recentMessages.some(msg => msg.isUserMessage && msg.content === userMessage)) {
-          await chat.sendMessage(userMessage);
-        }
+
+        // The current message will be sent after this block
       }
-      
+
       // Generate a response to the latest message
       const result = await chat.sendMessage(userMessage);
-      
+
       response = result.response.text();
     } else {
       // Use a fallback response if the API key is not available
       const randomIndex = Math.floor(Math.random() * fallbackResponses.length);
       response = fallbackResponses[randomIndex];
     }
-    
+
     // Save the AI response to the database
     await storage.createChatMessage({
       userId,
       isUserMessage: false,
       content: response
     });
-    
+
     return response;
   } catch (error) {
     console.error("Error generating chatbot response:", error);
-    
+
     // Use a fallback response in case of an error
     const fallbackResponse = "I'm having trouble connecting right now. Let's try a simple breathing exercise: breathe in for 4 counts, hold for 2, then exhale for 6. How does that feel?";
-    
+
     // Save the fallback response to the database
     await storage.createChatMessage({
       userId,
       isUserMessage: false,
       content: fallbackResponse
     });
-    
+
     return fallbackResponse;
   }
 }
