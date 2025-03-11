@@ -1,38 +1,48 @@
-import axios from 'axios';
 
-// Create an axios instance with base URL and default configs
-export const api = axios.create({
-  baseURL: '/api',
-  headers: {
+async function request<T = any>(
+  url: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = localStorage.getItem('token');
+  
+  const headers = {
     'Content-Type': 'application/json',
-  },
-});
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
 
-// Add a request interceptor for authentication
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
 
-// Add a response interceptor for handling common errors
-api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    // Handle authentication errors
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('authToken');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      message: 'An error occurred',
+    }));
+    throw new Error(error.message || 'Request failed');
   }
-);
+
+  return response.json();
+}
+
+export const api = {
+  get: <T = any>(url: string) => request<T>(url),
+  
+  post: <T = any>(url: string, data: any) =>
+    request<T>(url, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  put: <T = any>(url: string, data: any) =>
+    request<T>(url, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  
+  delete: <T = any>(url: string) =>
+    request<T>(url, {
+      method: 'DELETE',
+    }),
+};

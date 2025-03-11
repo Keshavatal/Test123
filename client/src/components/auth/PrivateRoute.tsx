@@ -1,28 +1,37 @@
 
-import { ReactNode } from 'react';
-import { Route, Redirect } from 'wouter';
+import React from 'react';
+import { Route, useLocation } from 'wouter';
 import { useAuth } from '../../context/AuthContext';
-import { Spinner } from '../ui/spinner';
 
 interface PrivateRouteProps {
+  component: React.ComponentType<any>;
   path: string;
-  children: ReactNode;
 }
 
-export default function PrivateRoute({ path, children }: PrivateRouteProps) {
-  const { user, loading } = useAuth();
+const PrivateRoute: React.FC<PrivateRouteProps> = ({ component: Component, ...rest }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Spinner className="w-8 h-8" />
-      </div>
-    );
-  }
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      setLocation('/login');
+    }
+  }, [isAuthenticated, isLoading, setLocation]);
 
   return (
-    <Route path={path}>
-      {user ? children : <Redirect to="/login" />}
-    </Route>
+    <Route
+      {...rest}
+      component={(props: any) =>
+        isLoading ? (
+          <div className="flex items-center justify-center h-screen">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        ) : isAuthenticated ? (
+          <Component {...props} />
+        ) : null
+      }
+    />
   );
-}
+};
+
+export default PrivateRoute;

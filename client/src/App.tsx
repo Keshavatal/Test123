@@ -1,120 +1,63 @@
-import { Switch, Route, useLocation } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "./context/AuthContext";
+import React from 'react';
+import { Switch, Route } from 'wouter';
+import { useAuth } from './context/AuthContext';
 
 // Pages
-import Dashboard from "@/pages/Dashboard";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
-import Assessment from "@/pages/Assessment";
-import Exercises from "@/pages/Exercises";
-import Journal from "@/pages/Journal";
-import Progress from "@/pages/Progress";
-import NotFound from "@/pages/not-found";
+import Dashboard from './pages/Dashboard';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import NotFound from './pages/NotFound';
+import Profile from './pages/Profile';
+import Journal from './pages/Journal';
+import MoodTracker from './pages/MoodTracker';
+import Assessments from './pages/Assessments';
+import Achievements from './pages/Achievements';
+import Affirmations from './pages/Affirmations';
+import Goals from './pages/Goals';
 
-// Exercise Pages - Using relative imports because these are not in the @/pages directory
-import BreathingExercise from "./pages/exercises/BreathingExercise";
-import MindfulnessMeditation from "./pages/exercises/MindfulnessMeditation";
-import CognitiveRestructuring from "./pages/exercises/CognitiveRestructuring";
-import GratitudePractice from "./pages/exercises/GratitudePractice";
-import BoxBreathing from "./pages/exercises/BoxBreathing";
-import ProgressiveRelaxation from "./pages/exercises/ProgressiveRelaxation";
-import ThoughtRecord from "./pages/exercises/ThoughtRecord";
-import ValuesClarification from "./pages/exercises/ValuesClarification";
-import ExerciseChatbot from "./pages/ExerciseChatbot"; // Added import
-import Chatbot from "./pages/Chatbot"; // Import Chatbot component
-import GuidedBreathingExercise from "./pages/GuidedBreathingExercise";
-import MeditationTimer from "./pages/MeditationTimer";
-import Goals from "./pages/Goals";
-import AffirmationGenerator from "./pages/AffirmationGenerator";
-import WeeklyReport from "./pages/WeeklyReport";
-import Profile from "./pages/Profile"; // Added import for Profile page
-import NewJournalEntry from "./pages/NewJournalEntry"; // Added import for NewJournalEntry
-import JournalEntry from "./pages/JournalEntry"; // Added import for JournalEntry
-import MoodTracker from "./pages/MoodTracker"; // Added import for MoodTracker
-
+// Exercise pages
+import BreathingExercise from './pages/exercises/BreathingExercise';
+import ProgressiveMuscleRelaxation from './pages/exercises/ProgressiveMuscleRelaxation';
+import GuidedMeditation from './pages/exercises/GuidedMeditation';
+import ThoughtRecords from './pages/exercises/ThoughtRecords';
+import CognitiveRestructuring from './pages/exercises/CognitiveRestructuring';
+import ValuesClarification from './pages/exercises/ValuesClarification';
 
 // Import PrivateRoute component
 import PrivateRoute from './components/auth/PrivateRoute';
-import Chatbot from './components/Chatbot';
+import ChatbotPage from './pages/Chatbot';
 
 function Router() {
   return (
     <Switch>
-      <Route path="/login">
-        <Login />
-      </Route>
-      <Route path="/register">
-        <Register />
-      </Route>
-      <PrivateRoute path="/">
-        <Dashboard />
-      </PrivateRoute>
-      <PrivateRoute path="/assessment">
-        <Assessment />
-      </PrivateRoute>
-      <PrivateRoute path="/exercises">
-        <Exercises />
-      </PrivateRoute>
-      <PrivateRoute path="/exercises/box-breathing">
-        <BoxBreathing />
-      </PrivateRoute>
-      <PrivateRoute path="/exercises/breathing">
-        <BreathingExercise />
-      </PrivateRoute>
-      <PrivateRoute path="/exercises/guided-breathing">
-        <GuidedBreathingExercise />
-      </PrivateRoute>
-      <PrivateRoute path="/exercises/meditation-timer">
-        <MeditationTimer />
-      </PrivateRoute>
-      <PrivateRoute path="/exercises/mindfulness">
-        <MindfulnessMeditation />
-      </PrivateRoute>
-      <PrivateRoute path="/journal">
-        <Journal />
-      </PrivateRoute>
-      <PrivateRoute path="/journal/new">
-          <NewJournalEntry />
-      </PrivateRoute>
-      <PrivateRoute path="/journal/:id">
-          <JournalEntry />
-      </PrivateRoute>
-      <PrivateRoute path="/mood">
-        <MoodTracker />
-      </PrivateRoute>
-      <PrivateRoute path="/goals">
-        <Goals />
-      </PrivateRoute>
-      <PrivateRoute path="/affirmations">
-        <AffirmationGenerator />
-      </PrivateRoute>
-      <PrivateRoute path="/reports/weekly">
-        <WeeklyReport />
-      </PrivateRoute>
-      <PrivateRoute path="/chat">
-        <Chatbot />
-      </PrivateRoute>
-      <PrivateRoute path="/profile">
-        <Profile />
-      </PrivateRoute>
-      <Route path="/:rest*">
-        <NotFound />
-      </Route>
+      <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
+      <PrivateRoute path="/" component={Dashboard} />
+      <PrivateRoute path="/profile" component={Profile} />
+      <PrivateRoute path="/journal" component={Journal} />
+      <PrivateRoute path="/mood-tracker" component={MoodTracker} />
+      <PrivateRoute path="/assessments" component={Assessments} />
+      <PrivateRoute path="/achievements" component={Achievements} />
+      <PrivateRoute path="/affirmations" component={Affirmations} />
+      <PrivateRoute path="/goals" component={Goals} />
+      <PrivateRoute path="/chatbot" component={ChatbotPage} />
+
+      {/* Exercise routes */}
+      <PrivateRoute path="/exercises/breathing" component={BreathingExercise} />
+      <PrivateRoute path="/exercises/progressive-muscle-relaxation" component={ProgressiveMuscleRelaxation} />
+      <PrivateRoute path="/exercises/guided-meditation" component={GuidedMeditation} />
+      <PrivateRoute path="/exercises/thought-records" component={ThoughtRecords} />
+      <PrivateRoute path="/exercises/cognitive-restructuring" component={CognitiveRestructuring} />
+      <PrivateRoute path="/exercises/values-clarification" component={ValuesClarification} />
+
+      <Route component={NotFound} />
     </Switch>
   );
 }
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router />
-        <Toaster />
-      </AuthProvider>
-    </QueryClientProvider>
+    <Router />
   );
 }
 

@@ -1,105 +1,153 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Avatar } from './ui/avatar';
+import { Textarea } from './ui/textarea';
 import { ScrollArea } from './ui/scroll-area';
 import { api } from '../lib/api';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Spinner from './ui/spinner';
+import { Send } from 'lucide-react';
 
 interface Message {
   id: number;
   content: string;
-  isUser: boolean;
-  timestamp: string;
+  isUserMessage: boolean;
+  createdAt: string;
 }
 
-export default function Chatbot() {
-  const [message, setMessage] = useState('');
-  const queryClient = useQueryClient();
+const Chatbot: React.FC = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: messages = [], isLoading } = useQuery({
-    queryKey: ['chatMessages'],
-    queryFn: () => api.get('/chat/messages').then(res => res.data),
-  });
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-  const sendMessageMutation = useMutation({
-    mutationFn: (content: string) => api.post('/chat/messages', { content }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chatMessages'] });
-    },
-  });
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const data = await api.get('/api/chat');
+        setMessages(data.messages || []);
+      } catch (error) {
+        console.error('Failed to fetch chat messages:', error);
+      }
+    };
 
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      sendMessageMutation.mutate(message);
-      setMessage('');
+    fetchMessages();
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = async () => {
+    if (!input.trim()) return;
+
+    const userMessage = {
+      id: Date.now(),
+      content: input,
+      isUserMessage: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const data = await api.post('/api/chat', { message: input });
+      
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          content: data.message,
+          isUserMessage: false,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          content: "I'm sorry, I'm having trouble connecting. Please try again later.",
+          isUserMessage: false,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto h-[80vh] flex flex-col">
-      <CardHeader>
-        <CardTitle>AI Mental Health Assistant</CardTitle>
-        <CardDescription>Chat with your personal AI mental health assistant</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-grow overflow-hidden">
-        <ScrollArea className="h-full pr-4">
-          {isLoading ? (
-            <div className="flex justify-center items-center h-full">
-              <p>Loading messages...</p>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex justify-center items-center h-full text-muted-foreground">
-              <p>No messages yet. Start the conversation!</p>
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-4">
+          {messages.length === 0 ? (
+            <div className="text-center p-4 text-muted-foreground">
+              <p>Send a message to start the conversation</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {messages.map((msg: Message) => (
+            messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${
+                  message.isUserMessage ? 'justify-end' : 'justify-start'
+                }`}
+              >
                 <div
-                  key={msg.id}
-                  className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}
+                  className={`max-w-[80%] rounded-lg p-3 ${
+                    message.isUserMessage
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
                 >
-                  <div className={`flex gap-2 max-w-[80%] ${msg.isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <Avatar className="w-8 h-8">
-                      {msg.isUser ? 'U' : 'AI'}
-                    </Avatar>
-                    <div
-                      className={`p-3 rounded-lg ${
-                        msg.isUser
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
-                    >
-                      <p>{msg.content}</p>
-                      <div className={`text-xs mt-1 ${msg.isUser ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                        {new Date(msg.timestamp).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  </div>
+                  <p className="whitespace-pre-wrap">{message.content}</p>
                 </div>
-              ))}
+              </div>
+            ))
+          )}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="max-w-[80%] rounded-lg p-3 bg-muted">
+                <Spinner size="sm" />
+              </div>
             </div>
           )}
-        </ScrollArea>
-      </CardContent>
-      <CardFooter>
-        <div className="flex w-full gap-2">
-          <Input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type your message..."
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleSendMessage();
-              }
-            }}
-          />
-          <Button onClick={handleSendMessage} disabled={sendMessageMutation.isPending}>
-            Send
-          </Button>
+          <div ref={messagesEndRef} />
         </div>
-      </CardFooter>
-    </Card>
+      </ScrollArea>
+
+      <div className="p-4 border-t flex gap-2">
+        <Textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Type your message..."
+          className="resize-none"
+          rows={1}
+        />
+        <Button
+          onClick={handleSendMessage}
+          disabled={isLoading || !input.trim()}
+          size="icon"
+        >
+          <Send className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
-}
+};
+
+export default Chatbot;
