@@ -8,12 +8,15 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { ChatMessage } from "@shared/schema";
+import { InteractiveExercise } from "@/components/InteractiveExercise";
+import { Brain, Wind, Heart, SunMedium, AlertCircle } from "lucide-react";
 
 export default function Chatbot() {
   const { user } = useUserContext();
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const [activeExercise, setActiveExercise] = useState<string | null>(null);
   
   // Fetch chat history
   const { data: chatHistory = [], isLoading } = useQuery<ChatMessage[]>({
@@ -54,18 +57,73 @@ export default function Chatbot() {
     sendMessageMutation.mutate(message);
   };
   
-  // Quick reply options
-  const quickReplies = [
-    "I'm feeling anxious today",
-    "Help me with stress management",
-    "I need a breathing exercise",
-    "Tell me about CBT",
-    "I can't sleep well"
-  ];
-  
-  const handleQuickReply = (reply: string) => {
-    sendMessageMutation.mutate(reply);
+  // Start exercise based on type
+  const startExercise = (type: string) => {
+    setActiveExercise(type);
+    
+    // Send a message to start the guided exercise
+    let startMessage = "";
+    switch (type) {
+      case "breathing":
+        startMessage = "I'd like to try a guided breathing exercise. Please lead me through it step by step.";
+        break;
+      case "cognitive":
+        startMessage = "Can you guide me through a cognitive restructuring exercise to challenge my negative thoughts?";
+        break;
+      case "mindfulness":
+        startMessage = "I need a guided mindfulness meditation exercise. Please lead me through it.";
+        break;
+      case "gratitude":
+        startMessage = "I want to practice gratitude. Can you guide me through a gratitude exercise?";
+        break;
+      default:
+        startMessage = `Please guide me through a ${type} exercise step by step.`;
+    }
+    
+    sendMessageMutation.mutate(startMessage);
   };
+  
+  // Complete the exercise and return to normal chat
+  const completeExercise = () => {
+    setActiveExercise(null);
+    
+    // Send a thank you message
+    sendMessageMutation.mutate("Thank you for guiding me through that exercise. It was helpful.");
+    
+    toast({
+      title: "Exercise Completed!",
+      description: "Great job completing your exercise. You're building positive habits.",
+    });
+  };
+  
+  // Enhanced quick reply options with exercise shortcuts
+  const quickReplies = [
+    {
+      text: "I'm feeling anxious today",
+      icon: <AlertCircle className="h-4 w-4" />,
+      action: () => sendMessageMutation.mutate("I'm feeling anxious today")
+    },
+    {
+      text: "Guide me through breathing",
+      icon: <Wind className="h-4 w-4" />,
+      action: () => startExercise("breathing")
+    },
+    {
+      text: "Cognitive restructuring",
+      icon: <Brain className="h-4 w-4" />,
+      action: () => startExercise("cognitive")
+    },
+    {
+      text: "Mindfulness session",
+      icon: <SunMedium className="h-4 w-4" />,
+      action: () => startExercise("mindfulness")
+    },
+    {
+      text: "Gratitude practice",
+      icon: <Heart className="h-4 w-4" />,
+      action: () => startExercise("gratitude")
+    }
+  ];
 
   return (
     <div className="h-[calc(100vh-130px)] md:h-[calc(100vh-100px)] flex flex-col">

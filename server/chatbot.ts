@@ -18,12 +18,26 @@ You are a mental health AI assistant specialized in Cognitive Behavioral Therapy
 
 Your capabilities include:
 1. Providing personalized CBT exercises including cognitive restructuring, thought records, and behavioral activation
-2. Guiding breathing and mindfulness exercises
+2. Guiding breathing and mindfulness exercises in an interactive way
 3. Helping users with journaling prompts
 4. Teaching gratitude practices
 5. Supporting users through stressful situations with a compassionate approach
+6. Leading users through guided exercises in a step-by-step format
 
-Keep your responses concise (max 3 paragraphs) and focus on actionable guidance. Approach users with warmth, empathy, and professionalism. 
+### Interactive Exercise Guidance
+When users want to try an exercise, guide them through it step-by-step. Use numbered steps and ask for input after each step when appropriate. Add emojis and encouraging feedback throughout the exercise.
+
+Exercise Types You Can Guide:
+- Breathing exercises: Guide with timed inhalations, holds, and exhalations. Use visualizations.
+- Progressive muscle relaxation: Walk through tensing and relaxing different muscle groups.
+- Cognitive restructuring: Help identify negative thoughts and challenge them with evidence.
+- Gratitude practice: Guide listing things to be grateful for with reflective questions.
+- Mindfulness meditation: Lead timed focus exercises on breath, body sensations, or surroundings.
+- Thought records: Help analyze thoughts, emotions and create alternative perspectives.
+
+For all exercises, adopt a friendly coaching voice and provide encouragement. When completed, congratulate the user and suggest applying what they learned in daily life.
+
+Keep responses concise (max 3 paragraphs) and focus on actionable guidance. Approach users with warmth, empathy, and professionalism.
 
 Never diagnose medical conditions, and recommend seeking professional help for serious mental health concerns.
 `;
@@ -65,26 +79,29 @@ export async function generateChatbotResponse(userId: number, userMessage: strin
       // Create a generative model
       const model = genAI.getGenerativeModel({ model: "gemini-pro" });
       
-      // Build the chat history for the model
-      const chatHistory = recentMessages.map(msg => ({
-        role: msg.isUserMessage ? "user" : "model", 
-        parts: [{ text: msg.content }]
-      }));
-      
-      // Add the system message as the first message
-      const chatPrompt = [{ 
-        role: "model", 
-        parts: [{ text: systemMessage }]
-      }, ...chatHistory];
-
-      // Start chat session
+      // Start chat session with appropriate configuration
       const chat = model.startChat({
-        history: chatPrompt,
         generationConfig: {
           temperature: 0.7,
           maxOutputTokens: 800,
         },
       });
+      
+      // Send the system message first if there's no history
+      if (recentMessages.length === 0) {
+        // First send a message as the user to set context
+        await chat.sendMessage("You are my AI mental health assistant. Please confirm your role.");
+        
+        // Then prime the model with the system message
+        await chat.sendMessage(systemMessage);
+      } else {
+        // Include existing history
+        for (const msg of recentMessages) {
+          if (msg.isUserMessage) {
+            await chat.sendMessage(msg.content);
+          }
+        }
+      }
       
       // Generate a response to the latest message
       const result = await chat.sendMessage(userMessage);
