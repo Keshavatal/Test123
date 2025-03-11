@@ -7,8 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useUserContext } from "@/contexts/UserContext";
-import { ChatMessage } from "@/shared/schema";
+import { ChatMessage } from "@shared/schema";
 import { Play, Pause, FastForward, Volume2, VolumeX } from "lucide-react";
+import { BreathingAnimation } from "@/components/BreathingAnimation";
+import { MindfulnessAnimation } from "@/components/MindfulnessAnimation";
 
 interface InteractiveExerciseProps {
   exerciseType: string;
@@ -31,6 +33,8 @@ export function InteractiveExercise({
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [timer, setTimer] = useState(0);
   const [maxTime, setMaxTime] = useState(0);
+  const [breathingPhase, setBreathingPhase] = useState<"inhale" | "hold" | "exhale" | "rest">("inhale");
+  const [showAnimation, setShowAnimation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const speechSynthesisRef = useRef<SpeechSynthesis | null>(
     typeof window !== "undefined" ? window.speechSynthesis : null
@@ -91,11 +95,27 @@ export function InteractiveExercise({
           const newProgress = Math.min(100, (timer / maxTime) * 100);
           setProgress(newProgress);
         }
+
+        // For breathing exercises, cycle through the phases
+        if (exerciseType === "breathing") {
+          // Each complete breath cycle is 14 seconds (4-4-4-2)
+          const secondsInCycle = timer % 14;
+          
+          if (secondsInCycle < 4) {
+            setBreathingPhase("inhale");
+          } else if (secondsInCycle < 8) {
+            setBreathingPhase("hold");
+          } else if (secondsInCycle < 12) {
+            setBreathingPhase("exhale");
+          } else {
+            setBreathingPhase("rest");
+          }
+        }
       }, 1000);
     }
     
     return () => clearInterval(interval);
-  }, [isPlaying, timer, maxTime]);
+  }, [isPlaying, timer, maxTime, exerciseType]);
   
   // Determine max time based on exercise type for progress calculation
   useEffect(() => {
@@ -181,6 +201,15 @@ export function InteractiveExercise({
           <CardTitle className="text-lg flex justify-between items-center">
             <span>Interactive {exerciseType.charAt(0).toUpperCase() + exerciseType.slice(1)} Exercise</span>
             <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => setShowAnimation(!showAnimation)}
+                className="h-8 w-8 p-0" 
+                title={showAnimation ? "Hide animation" : "Show animation"}
+              >
+                {showAnimation ? <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="5"/></svg> : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg>}
+              </Button>
               <Button 
                 size="sm" 
                 variant="ghost" 
