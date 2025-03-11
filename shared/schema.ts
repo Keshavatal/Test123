@@ -114,6 +114,37 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   createdAt: true,
 });
 
+// Affirmations
+export const affirmations = pgTable("affirmations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  content: text("content").notNull(),
+  category: text("category").notNull(),
+  favorite: boolean("favorite").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAffirmationSchema = createInsertSchema(affirmations).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Goals
+export const goals = pgTable("goals", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  completed: boolean("completed").default(false),
+  dueDate: timestamp("due_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertGoalSchema = createInsertSchema(goals).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -135,3 +166,9 @@ export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
 
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+
+export type Affirmation = typeof affirmations.$inferSelect;
+export type InsertAffirmation = z.infer<typeof insertAffirmationSchema>;
+
+export type Goal = typeof goals.$inferSelect;
+export type InsertGoal = z.infer<typeof insertGoalSchema>;
