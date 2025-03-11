@@ -7,7 +7,7 @@ import PrivateRoute from "./components/auth/PrivateRoute";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+const NotFound = lazy(() => import("./pages/not-found")); // Corrected import path
 const Profile = lazy(() => import("./pages/Profile"));
 const Journal = lazy(() => import("./pages/Journal"));
 const MoodTracker = lazy(() => import("./pages/MoodTracker"));
