@@ -1,104 +1,102 @@
-import React from 'react';
-import { Switch, Route } from 'wouter';
-import { useAuth } from './context/AuthContext';
+import React, { Suspense, lazy } from "react";
+import { Switch, Route } from "wouter";
+import { useAuth } from "./context/AuthContext";
+import PrivateRoute from "./components/auth/PrivateRoute";
 
-// Pages
-import Dashboard from './pages/Dashboard';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import NotFound from './pages/NotFound';
-import Profile from './pages/Profile';
-import Journal from './pages/Journal';
-import MoodTracker from './pages/MoodTracker';
-import Assessments from './pages/Assessments';
-import Achievements from './pages/Achievements';
-import Affirmations from './pages/Affirmations';
-import Goals from './pages/Goals';
+// Lazy-loaded pages for better performance
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Journal = lazy(() => import("./pages/Journal"));
+const MoodTracker = lazy(() => import("./pages/MoodTracker"));
+const Assessments = lazy(() => import("./pages/Assessments"));
+const Achievements = lazy(() => import("./pages/Achievements"));
+const Affirmations = lazy(() => import("./pages/Affirmations"));
+const Goals = lazy(() => import("./pages/Goals"));
+const ChatbotPage = lazy(() => import("./pages/Chatbot"));
 
 // Exercise pages
-import BreathingExercise from './pages/exercises/BreathingExercise';
-import ProgressiveMuscleRelaxation from './pages/exercises/ProgressiveMuscleRelaxation';
-import GuidedMeditation from './pages/exercises/GuidedMeditation';
-import ThoughtRecords from './pages/exercises/ThoughtRecords';
-import CognitiveRestructuring from './pages/exercises/CognitiveRestructuring';
-import ValuesClarification from './pages/exercises/ValuesClarification';
+const exercises = {
+  BreathingExercise: lazy(() => import("./pages/exercises/BreathingExercise")),
+  ProgressiveMuscleRelaxation: lazy(
+    () => import("./pages/exercises/ProgressiveMuscleRelaxation"),
+  ),
+  GuidedMeditation: lazy(() => import("./pages/exercises/GuidedMeditation")),
+  ThoughtRecords: lazy(() => import("./pages/exercises/ThoughtRecords")),
+  CognitiveRestructuring: lazy(
+    () => import("./pages/exercises/CognitiveRestructuring"),
+  ),
+  ValuesClarification: lazy(
+    () => import("./pages/exercises/ValuesClarification"),
+  ),
+};
 
-// Import PrivateRoute component
-import PrivateRoute from './components/auth/PrivateRoute';
-import ChatbotPage from './pages/Chatbot';
+const routes = [
+  { path: "/login", component: Login, isPrivate: false },
+  { path: "/register", component: Register, isPrivate: false },
+  { path: "/", component: Dashboard, isPrivate: true },
+  { path: "/profile", component: Profile, isPrivate: true },
+  { path: "/journal", component: Journal, isPrivate: true },
+  { path: "/mood-tracker", component: MoodTracker, isPrivate: true },
+  { path: "/assessments", component: Assessments, isPrivate: true },
+  { path: "/achievements", component: Achievements, isPrivate: true },
+  { path: "/affirmations", component: Affirmations, isPrivate: true },
+  { path: "/goals", component: Goals, isPrivate: true },
+  { path: "/chatbot", component: ChatbotPage, isPrivate: true },
+  // Exercise Routes
+  {
+    path: "/exercises/breathing",
+    component: exercises.BreathingExercise,
+    isPrivate: true,
+  },
+  {
+    path: "/exercises/progressive-muscle-relaxation",
+    component: exercises.ProgressiveMuscleRelaxation,
+    isPrivate: true,
+  },
+  {
+    path: "/exercises/guided-meditation",
+    component: exercises.GuidedMeditation,
+    isPrivate: true,
+  },
+  {
+    path: "/exercises/thought-records",
+    component: exercises.ThoughtRecords,
+    isPrivate: true,
+  },
+  {
+    path: "/exercises/cognitive-restructuring",
+    component: exercises.CognitiveRestructuring,
+    isPrivate: true,
+  },
+  {
+    path: "/exercises/values-clarification",
+    component: exercises.ValuesClarification,
+    isPrivate: true,
+  },
+];
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-      <PrivateRoute path="/" component={Dashboard} />
-      <PrivateRoute path="/profile" component={Profile} />
-      <PrivateRoute path="/journal" component={Journal} />
-      <PrivateRoute path="/mood-tracker" component={MoodTracker} />
-      <PrivateRoute path="/assessments" component={Assessments} />
-      <PrivateRoute path="/achievements" component={Achievements} />
-      <PrivateRoute path="/affirmations" component={Affirmations} />
-      <PrivateRoute path="/goals" component={Goals} />
-      <PrivateRoute path="/chatbot" component={ChatbotPage} />
-
-      {/* Exercise routes */}
-      <PrivateRoute path="/exercises/breathing" component={BreathingExercise} />
-      <PrivateRoute path="/exercises/progressive-muscle-relaxation" component={ProgressiveMuscleRelaxation} />
-      <PrivateRoute path="/exercises/guided-meditation" component={GuidedMeditation} />
-      <PrivateRoute path="/exercises/thought-records" component={ThoughtRecords} />
-      <PrivateRoute path="/exercises/cognitive-restructuring" component={CognitiveRestructuring} />
-      <PrivateRoute path="/exercises/values-clarification" component={ValuesClarification} />
-
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<div>Loading...</div>}>
+      <Switch>
+        {routes.map(({ path, component: Component, isPrivate }) =>
+          isPrivate ? (
+            <PrivateRoute key={path} path={path} component={Component} />
+          ) : (
+            <Route key={path} path={path} component={Component} />
+          ),
+        )}
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
 function App() {
-  return (
-    <Router />
-  );
+  return <Router />;
 }
 
 export default App;
-
-//Necessary files created to resolve import errors.  These are placeholders and need to be filled in with the actual application logic.
-// lib/api/index.js (or .ts)
-export const api = {
-  // Add your API functions here
-};
-
-//components/auth/PrivateRoute.jsx (or .tsx)
-import React from 'react';
-import { Route, Redirect } from 'wouter';
-import { useAuth } from '../../context/AuthContext';
-
-export const PrivateRoute = ({ children, ...rest }) => {
-  const { currentUser } = useAuth();
-  return (
-    <Route {...rest} element={currentUser ? children : <Redirect to="/login" />} />
-  );
-};
-
-
-// components/Chatbot.jsx (or .tsx)
-import React from 'react';
-
-export const Chatbot = () => {
-  return (
-    <div>
-      <h1>Chatbot Placeholder</h1>
-    </div>
-  );
-};
-
-//Placeholder components - replace with actual implementations.
-//pages/Profile.jsx (or .tsx)
-const Profile = () => <div>Profile Page</div>;
-//pages/NewJournalEntry.jsx (or .tsx)
-const NewJournalEntry = () => <div>New Journal Entry Page</div>;
-//pages/JournalEntry.jsx (or .tsx)
-const JournalEntry = () => <div>Journal Entry Page</div>;
-//pages/MoodTracker.jsx (or .tsx)
-const MoodTracker = () => <div>Mood Tracker Page</div>;
