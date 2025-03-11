@@ -1,15 +1,21 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useUserContext } from "@/contexts/UserContext";
+import React, { useState, useEffect, useRef } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/components/ui/use-toast";
+import { apiRequest } from "@/lib/api";
+import { useUserContext } from "@/contexts/UserContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
-import { ChatMessage } from "@shared/schema";
-import { InteractiveExercise } from "@/components/InteractiveExercise";
-import { Brain, Wind, Heart, SunMedium, AlertCircle } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
+
+interface ChatMessage {
+  id: number;
+  content: string;
+  isUserMessage: boolean;
+  createdAt: string;
+}
 
 export default function Chatbot() {
   const { user } = useUserContext();
@@ -17,13 +23,14 @@ export default function Chatbot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
-  
+  const queryClient = useQueryClient();
+
   // Fetch chat history
   const { data: chatHistory = [], isLoading } = useQuery<ChatMessage[]>({
     queryKey: ["/api/chat"],
     enabled: !!user,
   });
-  
+
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (message: string) => {
@@ -42,216 +49,178 @@ export default function Chatbot() {
       });
     },
   });
-  
+
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatHistory]);
-  
+
+  // If no messages and first load, create initial bot message
+  useEffect(() => {
+    if (!isLoading && chatHistory && chatHistory.length === 0 && user) {
+      sendMessageMutation.mutate("Hello, I'd like some help with my mental health.");
+    }
+  }, [isLoading, chatHistory, user, sendMessageMutation]);
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
-    
+
     sendMessageMutation.mutate(message);
   };
-  
+
   // Start exercise based on type
   const startExercise = (type: string) => {
     setActiveExercise(type);
-    
+
     // Send a message to start the guided exercise
     let startMessage = "";
+
     switch (type) {
       case "breathing":
-        startMessage = "I'd like to try a guided breathing exercise. Please lead me through it step by step.";
-        break;
-      case "cognitive":
-        startMessage = "Can you guide me through a cognitive restructuring exercise to challenge my negative thoughts?";
+        startMessage = "Guide me through a breathing exercise to reduce anxiety.";
         break;
       case "mindfulness":
-        startMessage = "I need a guided mindfulness meditation exercise. Please lead me through it.";
+        startMessage = "I'd like to try a mindfulness meditation exercise.";
+        break;
+      case "cbt":
+        startMessage = "Help me challenge negative thoughts with cognitive restructuring.";
         break;
       case "gratitude":
-        startMessage = "I want to practice gratitude. Can you guide me through a gratitude exercise?";
+        startMessage = "I want to practice gratitude. Can you guide me?";
+        break;
+      case "relaxation":
+        startMessage = "Guide me through a progressive muscle relaxation exercise.";
         break;
       default:
-        startMessage = `Please guide me through a ${type} exercise step by step.`;
+        startMessage = `I want to try a ${type} exercise.`;
     }
-    
+
     sendMessageMutation.mutate(startMessage);
   };
-  
-  // Complete the exercise and return to normal chat
-  const completeExercise = () => {
-    setActiveExercise(null);
-    
-    // Send a thank you message
-    sendMessageMutation.mutate("Thank you for guiding me through that exercise. It was helpful.");
-    
-    toast({
-      title: "Exercise Completed!",
-      description: "Great job completing your exercise. You're building positive habits.",
-    });
-  };
-  
-  // Enhanced quick reply options with exercise shortcuts
+
+  // Quick reply options
   const quickReplies = [
-    {
-      text: "I'm feeling anxious today",
-      icon: <AlertCircle className="h-4 w-4" />,
-      action: () => sendMessageMutation.mutate("I'm feeling anxious today")
-    },
-    {
-      text: "Guide me through breathing",
-      icon: <Wind className="h-4 w-4" />,
-      action: () => startExercise("breathing")
-    },
-    {
-      text: "Cognitive restructuring",
-      icon: <Brain className="h-4 w-4" />,
-      action: () => startExercise("cognitive")
-    },
-    {
-      text: "Mindfulness session",
-      icon: <SunMedium className="h-4 w-4" />,
-      action: () => startExercise("mindfulness")
-    },
-    {
-      text: "Gratitude practice",
-      icon: <Heart className="h-4 w-4" />,
-      action: () => startExercise("gratitude")
-    }
+    { text: "I'm feeling anxious", action: () => sendMessageMutation.mutate("I'm feeling anxious today. What can I do?") },
+    { text: "Breathing exercise", action: () => startExercise("breathing") },
+    { text: "Challenge negative thoughts", action: () => startExercise("cbt") },
+    { text: "Gratitude practice", action: () => startExercise("gratitude") },
+    { text: "Help me sleep", action: () => sendMessageMutation.mutate("I'm having trouble sleeping. Any tips?") },
   ];
 
   return (
-    <div className="h-[calc(100vh-130px)] md:h-[calc(100vh-100px)] flex flex-col">
-      <header className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold font-quicksand text-foreground">
-          AI Wellness Coach
-        </h1>
-        <p className="text-gray-500 mt-1">
-          {activeExercise 
-            ? `Interactive ${activeExercise.charAt(0).toUpperCase() + activeExercise.slice(1)} Exercise` 
-            : "Chat with your personal CBT coach"}
-        </p>
-      </header>
+    <div className="container mx-auto p-4 max-w-4xl">
+      <h1 className="text-2xl font-bold mb-6">Chat with Your Mental Health Assistant</h1>
 
-      {activeExercise ? (
-        <InteractiveExercise 
-          exerciseType={activeExercise}
-          messages={chatHistory ?? []}
-          onSendMessage={(msg) => sendMessageMutation.mutate(msg)}
-          onComplete={completeExercise}
-        />
-      ) : (
-        <Card className="flex-1 flex flex-col overflow-hidden mb-4">
-          <div className="flex items-center gap-3 p-4 border-b">
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-              <i className="fas fa-robot text-white"></i>
-            </div>
-            <div>
-              <h2 className="font-semibold font-quicksand">MindWell AI</h2>
-              <p className="text-xs text-gray-500">Your CBT wellness coach</p>
-            </div>
-          </div>
-          
-          <ScrollArea className="flex-1 p-4 bg-background">
+      <Card className="shadow-lg">
+        <CardContent className="p-4">
+          {/* Chat Messages Display */}
+          <ScrollArea className="h-[400px] pr-4">
             {isLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-pulse flex flex-col gap-2 w-2/3">
-                  <div className="h-10 bg-gray-200 rounded-lg"></div>
-                  <div className="h-16 bg-gray-200 rounded-lg"></div>
-                  <div className="h-10 bg-gray-200 rounded-lg self-end"></div>
-                </div>
+              <div className="flex justify-center items-center h-full">
+                <Loader2 className="w-6 h-6 animate-spin" />
               </div>
             ) : chatHistory.length === 0 ? (
-              <div className="flex gap-3 mb-6">
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                  <i className="fas fa-robot text-white text-xs"></i>
-                </div>
-                <div className="bg-white rounded-lg p-3 rounded-tl-none shadow-sm max-w-[80%]">
-                  <p className="text-sm">
-                    Hi {user?.firstName || "there"}! I'm your AI wellness coach using cognitive behavioral therapy techniques. How are you feeling today?
-                  </p>
-                </div>
+              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                <p>Start chatting with your mental health assistant.</p>
+                <p className="text-sm mt-2">
+                  Ask about exercises, coping strategies, or share how you're feeling.
+                </p>
               </div>
             ) : (
-              chatHistory.map((message: ChatMessage) => (
-                <div 
-                  key={message.id} 
-                  className={`flex gap-3 mb-6 ${message.isUserMessage ? "justify-end" : ""}`}
-                >
-                  {!message.isUserMessage && (
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                      <i className="fas fa-robot text-white text-xs"></i>
-                    </div>
-                  )}
-                  <div 
-                    className={`${
-                      message.isUserMessage 
-                        ? "bg-primary text-white rounded-lg p-3 rounded-tr-none shadow-sm max-w-[80%]" 
-                        : "bg-white rounded-lg p-3 rounded-tl-none shadow-sm max-w-[80%]"
-                    }`}
+              <div className="space-y-4">
+                {chatHistory.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.isUserMessage ? "justify-end" : "justify-start"}`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <div className="flex items-start gap-2 max-w-[80%]">
+                      {!msg.isUserMessage && (
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src="/bot-avatar.png" alt="AI" />
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            AI
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div
+                        className={`rounded-lg p-3 ${
+                          msg.isUserMessage
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                      {msg.isUserMessage && (
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src="/user-avatar.png" alt="You" />
+                          <AvatarFallback className="bg-secondary text-secondary-foreground">
+                            {user?.firstName?.charAt(0) || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </div>
                   </div>
-                  {message.isUserMessage && (
-                    <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-medium text-purple-600">
-                        {user?.firstName?.charAt(0) || "U"}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-            
-            {/* Quick Reply Exercise Options (only show after AI response) */}
-            {chatHistory.length > 0 && !chatHistory[chatHistory.length - 1]?.isUserMessage && (
-              <div className="flex flex-wrap gap-2 mb-6 ml-12">
-                {quickReplies.map((reply, index) => (
-                  <button 
-                    key={index}
-                    onClick={reply.action}
-                    className="flex items-center gap-2 bg-white px-4 py-2 rounded-full text-sm font-medium border border-primary text-primary hover:bg-primary hover:text-white transition-colors"
-                  >
-                    {reply.icon}
-                    <span>{reply.text}</span>
-                  </button>
                 ))}
+                <div ref={messagesEndRef} />
               </div>
             )}
-            
-            <div ref={messagesEndRef} />
           </ScrollArea>
-          
-          <form onSubmit={handleSendMessage} className="p-4 border-t bg-white">
-            <div className="flex gap-2">
-              <div className="flex-1 relative">
-                <Input
-                  type="text"
-                  placeholder="Type your message..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-full"
-                />
-              </div>
-              <Button 
-                type="submit"
-                size="icon"
-                className="rounded-full bg-primary text-white hover:bg-primary/90"
-                disabled={sendMessageMutation.isPending}
+
+          {/* Quick Replies */}
+          <div className="my-4 flex flex-wrap gap-2">
+            {quickReplies.map((reply, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                size="sm"
+                onClick={reply.action}
+                className="text-xs"
               >
-                {sendMessageMutation.isPending ? (
-                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                ) : (
-                  <i className="fas fa-paper-plane"></i>
-                )}
+                {reply.text}
+              </Button>
+            ))}
+          </div>
+
+          {/* Message Input */}
+          <form onSubmit={handleSendMessage} className="flex gap-2 mt-4">
+            <Input
+              placeholder="Type your message..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="flex-1"
+            />
+            <Button type="submit" disabled={sendMessageMutation.isPending || !message.trim()}>
+              {sendMessageMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              <span className="ml-2">Send</span>
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Exercise UI - Would be extended based on active exercise */}
+      {activeExercise && (
+        <Card className="mt-4 p-4">
+          <CardContent>
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">
+                {activeExercise.charAt(0).toUpperCase() + activeExercise.slice(1)} Exercise
+              </h2>
+              <Button size="sm" variant="outline" onClick={() => setActiveExercise(null)}>
+                Close
               </Button>
             </div>
-          </form>
+            <p className="text-muted-foreground mt-2">
+              Follow the guidance provided by the assistant in the chat above.
+            </p>
+          </CardContent>
         </Card>
       )}
     </div>

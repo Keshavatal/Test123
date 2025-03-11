@@ -85,21 +85,37 @@ export async function generateChatbotResponse(userId: number, userMessage: strin
           temperature: 0.7,
           maxOutputTokens: 800,
         },
+        // No history here - we'll add it properly below
       });
       
-      // Send the system message first if there's no history
+      // Handle chat history in a way that ensures proper formatting
       if (recentMessages.length === 0) {
-        // First send a message as the user to set context
-        await chat.sendMessage("You are my AI mental health assistant. Please confirm your role.");
+        // For a new conversation, first send a user message
+        await chat.sendMessage("I'd like help with my mental health.");
         
         // Then prime the model with the system message
         await chat.sendMessage(systemMessage);
+        
+        // Finally send the actual user message
+        await chat.sendMessage(userMessage);
       } else {
-        // Include existing history
+        // For existing conversations, replay the history in order
+        let hasSystemMessage = false;
+        
         for (const msg of recentMessages) {
+          // Send messages in order, ensuring we maintain the correct alternating pattern
           if (msg.isUserMessage) {
             await chat.sendMessage(msg.content);
+          } else if (!hasSystemMessage) {
+            // Only send the system message once
+            hasSystemMessage = true;
+            await chat.sendMessage(systemMessage);
           }
+        }
+        
+        // Finally, send the current user message if it's not already in the history
+        if (!recentMessages.some(msg => msg.isUserMessage && msg.content === userMessage)) {
+          await chat.sendMessage(userMessage);
         }
       }
       

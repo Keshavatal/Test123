@@ -381,20 +381,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const messages = await storage.getChatMessagesByUserId(req.user.id);
         
-        const chatHistory = messages.map(msg => ({
-          role: msg.isUserMessage ? "user" : "model",
-          parts: [{ text: msg.content }]
-        }));
+        // Format chat history correctly - first message must be from user
+        // Create a proper history array that starts with a user message
+        let chatHistory = [];
         
-        // Add system prompt to guide the AI
-        const systemPrompt = {
-          role: "model",
-          parts: [{ text: "I am MindBot, a CBT-focused wellness assistant. I provide supportive, empathetic guidance using cognitive behavioral therapy techniques to help users manage their mental health. I can suggest exercises like deep breathing, cognitive restructuring, gratitude practice, and mindfulness meditation. I'll avoid giving medical advice and focus on evidence-based CBT techniques while maintaining a calm, supportive tone." }]
-        };
+        // Add a dummy user message first if needed
+        if (messages.length > 0) {
+          // Find the first user message to use
+          const firstUserMsg = messages.find(msg => msg.isUserMessage);
+          if (firstUserMsg) {
+            // Start with this user message
+            chatHistory.push({
+              role: "user",
+              parts: [{ text: firstUserMsg.content }]
+            });
+            
+            // Then add a system response to set the tone
+            chatHistory.push({
+              role: "model",
+              parts: [{ text: "I am MindBot, a CBT-focused wellness assistant. I provide supportive, empathetic guidance using cognitive behavioral therapy techniques to help users manage their mental health. I can suggest exercises like deep breathing, cognitive restructuring, gratitude practice, and mindfulness meditation. I'll avoid giving medical advice and focus on evidence-based CBT techniques while maintaining a calm, supportive tone." }]
+            });
+            
+            // Then add the rest of the conversation, skipping the first user message we already added
+            const remainingMessages = messages.filter(msg => msg !== firstUserMsg);
+            for (const msg of remainingMessages) {
+              chatHistory.push({
+                role: msg.isUserMessage ? "user" : "model",
+                parts: [{ text: msg.content }]
+              });
+            }
+          }
+        }
+        
+        // If we don't have a valid history yet, create a minimal valid one
+        if (chatHistory.length === 0) {
+          chatHistory = [
+            {
+              role: "user",
+              parts: [{ text: message.content }]
+            }
+          ];
+        }
         
         // Create chat session
         const chat = model.startChat({
-          history: [systemPrompt, ...chatHistory],
+          history: chatHistory,
           generationConfig: {
             temperature: 0.7,
             maxOutputTokens: 800,
