@@ -25,6 +25,12 @@ import ThoughtRecord from "./pages/exercises/ThoughtRecord";
 import ValuesClarification from "./pages/exercises/ValuesClarification";
 import ExerciseChatbot from "./pages/ExerciseChatbot"; // Added import
 import Chatbot from "./pages/Chatbot"; // Import Chatbot component
+import GuidedBreathingExercise from "./pages/GuidedBreathingExercise";
+import MeditationTimer from "./pages/MeditationTimer";
+import Goals from "./pages/Goals";
+import AffirmationGenerator from "./pages/AffirmationGenerator";
+import WeeklyReport from "./pages/WeeklyReport";
+
 
 // Import PrivateRoute component
 import PrivateRoute from './components/PrivateRoute';
@@ -32,66 +38,64 @@ import PrivateRoute from './components/PrivateRoute';
 function Router() {
   return (
     <Switch>
-      <Route path="/">
-        <Dashboard />
-      </Route>
       <Route path="/login">
         <Login />
       </Route>
       <Route path="/register">
         <Register />
       </Route>
-      <Route path="/assessment">
+      <PrivateRoute path="/">
+        <Dashboard />
+      </PrivateRoute>
+      <PrivateRoute path="/assessment">
         <Assessment />
-      </Route>
-      <Route path="/exercises">
+      </PrivateRoute>
+      <PrivateRoute path="/exercises">
         <Exercises />
-      </Route>
-      <Route path="/journal">
-        <Journal />
-      </Route>
-      <Route path="/progress">
-        <Progress />
-      </Route>
-
-      {/* Exercise Routes */}
-      <Route path="/exercises/breathing">
-        <BreathingExercise />
-      </Route>
-      <Route path="/exercises/mindfulness">
-        <MindfulnessMeditation />
-      </Route>
-      <Route path="/exercises/cognitive">
-        <CognitiveRestructuring />
-      </Route>
-      <Route path="/exercises/gratitude">
-        <GratitudePractice />
-      </Route>
-      <Route path="/exercises/box-breathing">
+      </PrivateRoute>
+      <PrivateRoute path="/exercises/box-breathing">
         <BoxBreathing />
-      </Route>
-      <Route path="/exercises/progressive-relaxation">
-        <ProgressiveRelaxation />
-      </Route>
-      <Route path="/exercises/thought-record">
-        <ThoughtRecord />
-      </Route>
-      <Route path="/exercises/values-clarification">
-        <ValuesClarification />
-      </Route>
-
-      <Route path="/chatbot">
-        <PrivateRoute>
-          <Chatbot />
-        </PrivateRoute>
-      </Route>
-      <Route path="/exercise-chatbot">
-        <PrivateRoute>
-          <ExerciseChatbot />
-        </PrivateRoute>
-      </Route>
-
-      <Route>
+      </PrivateRoute>
+      <PrivateRoute path="/exercises/breathing">
+        <BreathingExercise />
+      </PrivateRoute>
+      <PrivateRoute path="/exercises/guided-breathing">
+        <GuidedBreathingExercise />
+      </PrivateRoute>
+      <PrivateRoute path="/exercises/meditation-timer">
+        <MeditationTimer />
+      </PrivateRoute>
+      <PrivateRoute path="/exercises/mindfulness">
+        <MindfulnessMeditation />
+      </PrivateRoute>
+      <PrivateRoute path="/journal">
+        <Journal />
+      </PrivateRoute>
+      <PrivateRoute path="/journal/new">
+          <NewJournalEntry />
+      </PrivateRoute>
+      <PrivateRoute path="/journal/:id">
+          <JournalEntry />
+      </PrivateRoute>
+      <PrivateRoute path="/mood">
+        <MoodTracker />
+      </PrivateRoute>
+      <PrivateRoute path="/goals">
+        <Goals />
+      </PrivateRoute>
+      <PrivateRoute path="/affirmations">
+        <AffirmationGenerator />
+      </PrivateRoute>
+      <PrivateRoute path="/reports/weekly">
+        <WeeklyReport />
+      </PrivateRoute>
+      <PrivateRoute path="/chat">
+        <Chatbot />
+      </PrivateRoute>
+      <PrivateRoute path="/profile">
+        <Profile />
+      </PrivateRoute>
+      <Route path="/:rest*">
         <NotFound />
       </Route>
     </Switch>

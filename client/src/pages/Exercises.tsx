@@ -7,13 +7,13 @@ import Footer from "@/components/layout/Footer";
 import ExerciseCard, { ExerciseProps } from "@/components/dashboard/ExerciseCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { SearchIcon, Brain, Wind, Heart, PenLine } from "lucide-react";
+import { SearchIcon, Brain, Wind, Heart, PenLine, LungsIcon, Lotus as LotusIcon, AlarmClock as AlarmClockIcon } from "lucide-react";
 
 export default function Exercises() {
   const { user, isLoading: authLoading } = useAuth();
   const [location, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   const { data: exerciseHistory, isLoading: exercisesLoading } = useQuery({
     queryKey: ['/api/exercises'],
     enabled: !!user
@@ -84,6 +84,22 @@ export default function Exercises() {
       duration: 5,
       type: "breathing",
       path: "/exercises/box-breathing"
+    },
+    {
+      id: "meditation-timer",
+      title: "Customizable Meditation Timer",
+      description: "Set your own meditation timer with sounds and intervals",
+      duration: "Custom",
+      type: "mindfulness",
+      path: "/exercises/meditation-timer"
+    },
+    {
+      id: "guided-breathing",
+      title: "Guided Breathing Exercises",
+      description: "Choose from different breathing patterns with guidance",
+      duration: "Custom",
+      type: "breathing",
+      path: "/exercises/guided-breathing"
     }
   ];
 
@@ -92,11 +108,11 @@ export default function Exercises() {
     return allExercises.filter(exercise => {
       const matchesSearch = exercise.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            exercise.description.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       if (category === "all") {
         return matchesSearch;
       }
-      
+
       return exercise.type === category && matchesSearch;
     });
   };
@@ -120,7 +136,7 @@ export default function Exercises() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      
+
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto mb-8">
           <h1 className="text-3xl font-quicksand font-bold mb-2">CBT Exercises Library</h1>
@@ -128,7 +144,7 @@ export default function Exercises() {
             Explore our collection of evidence-based Cognitive Behavioral Therapy exercises
             designed to improve your mental wellbeing.
           </p>
-          
+
           <div className="relative mb-6">
             <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -139,7 +155,7 @@ export default function Exercises() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
+
           <Tabs defaultValue="all">
             <TabsList className="mb-6">
               <TabsTrigger value="all">All Exercises</TabsTrigger>
@@ -156,7 +172,7 @@ export default function Exercises() {
                 <Brain className="h-4 w-4 mr-2" /> Mindfulness
               </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="all" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {getFilteredExercises("all").map((exercise) => (
@@ -168,7 +184,7 @@ export default function Exercises() {
                 ))}
               </div>
             </TabsContent>
-            
+
             <TabsContent value="cognitive" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {getFilteredExercises("cognitive").map((exercise) => (
@@ -180,7 +196,7 @@ export default function Exercises() {
                 ))}
               </div>
             </TabsContent>
-            
+
             <TabsContent value="breathing" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {getFilteredExercises("breathing").map((exercise) => (
@@ -192,7 +208,7 @@ export default function Exercises() {
                 ))}
               </div>
             </TabsContent>
-            
+
             <TabsContent value="gratitude" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {getFilteredExercises("gratitude").map((exercise) => (
@@ -204,7 +220,7 @@ export default function Exercises() {
                 ))}
               </div>
             </TabsContent>
-            
+
             <TabsContent value="mindfulness" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {getFilteredExercises("mindfulness").map((exercise) => (
@@ -219,7 +235,7 @@ export default function Exercises() {
           </Tabs>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );

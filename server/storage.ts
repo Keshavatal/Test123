@@ -1,6 +1,6 @@
-
 import fs from 'fs';
 import path from 'path';
+import { promisify } from 'util';
 import {
   users, User, InsertUser,
   moods, Mood, InsertMood,
@@ -8,7 +8,9 @@ import {
   journals, Journal, InsertJournal,
   achievements, Achievement, InsertAchievement,
   assessments, Assessment, InsertAssessment,
-  chatMessages, ChatMessage, InsertChatMessage
+  chatMessages, ChatMessage, InsertChatMessage,
+  goals, Goal, InsertGoal,
+  affirmations, Affirmation, InsertAffirmation
 } from "@shared/schema";
 
 export interface IStorage {
@@ -43,6 +45,20 @@ export interface IStorage {
   // Chat operations
   getChatMessagesByUserId(userId: number): Promise<ChatMessage[]>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+
+  // Goal operations
+  getGoalsByUserId(userId: number): Promise<Goal[]>;
+  getGoalById(id: number): Promise<Goal | null>;
+  createGoal(goal: InsertGoal): Promise<Goal>;
+  updateGoal(id: number, updates: Partial<Goal>): Promise<Goal | null>;
+  deleteGoal(id: number): Promise<boolean>;
+
+  // Affirmation operations
+  getAffirmationsByUserId(userId: number): Promise<Affirmation[]>;
+  getAffirmationById(id: number): Promise<Affirmation | null>;
+  createAffirmation(affirmation: InsertAffirmation): Promise<Affirmation>;
+  updateAffirmation(id: number, updates: Partial<Affirmation>): Promise<Affirmation | null>;
+  deleteAffirmation(id: number): Promise<boolean>;
 }
 
 export class FileStorage implements IStorage {
@@ -54,6 +70,8 @@ export class FileStorage implements IStorage {
   private achievements: Map<number, Achievement>;
   private assessments: Map<number, Assessment>;
   private chatMessages: Map<number, ChatMessage>;
+  private goals: Map<number, Goal>;
+  private affirmations: Map<number, Affirmation>;
 
   private currentUserId: number;
   private currentMoodId: number;
@@ -62,15 +80,21 @@ export class FileStorage implements IStorage {
   private currentAchievementId: number;
   private currentAssessmentId: number;
   private currentChatMessageId: number;
+  private currentGoalId: number;
+  private currentAffirmationId: number;
+
+  private readFile = promisify(fs.readFile);
+  private writeFile = promisify(fs.writeFile);
+
 
   constructor() {
     this.dataDir = path.join(process.cwd(), 'data');
-    
+
     // Ensure data directory exists
     if (!fs.existsSync(this.dataDir)) {
       fs.mkdirSync(this.dataDir, { recursive: true });
     }
-    
+
     // Initialize maps and load data
     this.users = new Map();
     this.moods = new Map();
@@ -79,9 +103,11 @@ export class FileStorage implements IStorage {
     this.achievements = new Map();
     this.assessments = new Map();
     this.chatMessages = new Map();
+    this.goals = new Map();
+    this.affirmations = new Map();
 
     this.loadData();
-    
+
     // Set initial IDs
     this.currentUserId = this.getNextId(this.users);
     this.currentMoodId = this.getNextId(this.moods);
@@ -90,6 +116,8 @@ export class FileStorage implements IStorage {
     this.currentAchievementId = this.getNextId(this.achievements);
     this.currentAssessmentId = this.getNextId(this.assessments);
     this.currentChatMessageId = this.getNextId(this.chatMessages);
+    this.currentGoalId = this.getNextId(this.goals);
+    this.currentAffirmationId = this.getNextId(this.affirmations);
   }
 
   private getNextId(map: Map<number, any>): number {
@@ -105,15 +133,17 @@ export class FileStorage implements IStorage {
     this.loadCollection('achievements', this.achievements);
     this.loadCollection('assessments', this.assessments);
     this.loadCollection('chatMessages', this.chatMessages);
+    this.loadCollection('goals', this.goals);
+    this.loadCollection('affirmations', this.affirmations);
   }
 
-  private loadCollection(filename: string, map: Map<number, any>): void {
+  private async loadCollection(filename: string, map: Map<number, any>): Promise<void> {
     const filePath = path.join(this.dataDir, `${filename}.json`);
-    
+
     if (fs.existsSync(filePath)) {
       try {
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        
+        const data = JSON.parse(await this.readFile(filePath, 'utf8'));
+
         for (const item of data) {
           if (item && typeof item.id === 'number') {
             map.set(item.id, item);
@@ -125,12 +155,12 @@ export class FileStorage implements IStorage {
     }
   }
 
-  private saveCollection(filename: string, map: Map<number, any>): void {
+  private async saveCollection(filename: string, map: Map<number, any>): Promise<void> {
     const filePath = path.join(this.dataDir, `${filename}.json`);
-    
+
     try {
       const data = Array.from(map.values());
-      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+      await this.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
     } catch (error) {
       console.error(`Error saving ${filename}:`, error);
     }
@@ -166,7 +196,7 @@ export class FileStorage implements IStorage {
       initialAssessmentCompleted: false
     };
     this.users.set(id, user);
-    this.saveCollection('users', this.users);
+    await this.saveCollection('users', this.users);
     return user;
   }
 
@@ -176,7 +206,7 @@ export class FileStorage implements IStorage {
 
     const updatedUser = { ...user, ...updates };
     this.users.set(id, updatedUser);
-    this.saveCollection('users', this.users);
+    await this.saveCollection('users', this.users);
     return updatedUser;
   }
 
@@ -195,7 +225,7 @@ export class FileStorage implements IStorage {
       createdAt: new Date()
     };
     this.moods.set(id, mood);
-    this.saveCollection('moods', this.moods);
+    await this.saveCollection('moods', this.moods);
     return mood;
   }
 
@@ -215,7 +245,7 @@ export class FileStorage implements IStorage {
       createdAt: new Date()
     };
     this.exercises.set(id, exercise);
-    this.saveCollection('exercises', this.exercises);
+    await this.saveCollection('exercises', this.exercises);
     return exercise;
   }
 
@@ -238,7 +268,7 @@ export class FileStorage implements IStorage {
       createdAt: new Date()
     };
     this.journals.set(id, journal);
-    this.saveCollection('journals', this.journals);
+    await this.saveCollection('journals', this.journals);
     return journal;
   }
 
@@ -257,7 +287,7 @@ export class FileStorage implements IStorage {
       earnedAt: new Date()
     };
     this.achievements.set(id, achievement);
-    this.saveCollection('achievements', this.achievements);
+    await this.saveCollection('achievements', this.achievements);
     return achievement;
   }
 
@@ -275,7 +305,7 @@ export class FileStorage implements IStorage {
       createdAt: new Date()
     };
     this.assessments.set(id, assessment);
-    this.saveCollection('assessments', this.assessments);
+    await this.saveCollection('assessments', this.assessments);
     return assessment;
   }
 
@@ -294,8 +324,85 @@ export class FileStorage implements IStorage {
       createdAt: new Date()
     };
     this.chatMessages.set(id, message);
-    this.saveCollection('chatMessages', this.chatMessages);
+    await this.saveCollection('chatMessages', this.chatMessages);
     return message;
+  }
+
+  // Goals
+  async getGoalsByUserId(userId: number): Promise<Goal[]> {
+    const goals = Array.from(this.goals.values());
+    return goals.filter(goal => goal.userId === userId);
+  }
+
+  async getGoalById(id: number): Promise<Goal | null> {
+    return this.goals.get(id) || null;
+  }
+
+  async createGoal(data: InsertGoal): Promise<Goal> {
+    const id = this.currentGoalId++;
+    const goal: Goal = {
+      ...data,
+      id,
+      createdAt: new Date()
+    };
+    this.goals.set(id, goal);
+    await this.saveCollection('goals', this.goals);
+    return goal;
+  }
+
+  async updateGoal(id: number, updates: Partial<Goal>): Promise<Goal | null> {
+    const goal = this.goals.get(id);
+    if (!goal) return null;
+
+    const updatedGoal = { ...goal, ...updates };
+    this.goals.set(id, updatedGoal);
+    await this.saveCollection('goals', this.goals);
+    return updatedGoal;
+  }
+
+  async deleteGoal(id: number): Promise<boolean> {
+    const deleted = this.goals.delete(id);
+    await this.saveCollection('goals', this.goals);
+    return deleted;
+  }
+
+
+  // Affirmations
+  async getAffirmationsByUserId(userId: number): Promise<Affirmation[]> {
+    const affirmations = Array.from(this.affirmations.values());
+    return affirmations.filter(affirmation => affirmation.userId === userId);
+  }
+
+  async getAffirmationById(id: number): Promise<Affirmation | null> {
+    return this.affirmations.get(id) || null;
+  }
+
+  async createAffirmation(data: InsertAffirmation): Promise<Affirmation> {
+    const id = this.currentAffirmationId++;
+    const affirmation: Affirmation = {
+      ...data,
+      id,
+      createdAt: new Date()
+    };
+    this.affirmations.set(id, affirmation);
+    await this.saveCollection('affirmations', this.affirmations);
+    return affirmation;
+  }
+
+  async updateAffirmation(id: number, updates: Partial<Affirmation>): Promise<Affirmation | null> {
+    const affirmation = this.affirmations.get(id);
+    if (!affirmation) return null;
+
+    const updatedAffirmation = { ...affirmation, ...updates };
+    this.affirmations.set(id, updatedAffirmation);
+    await this.saveCollection('affirmations', this.affirmations);
+    return updatedAffirmation;
+  }
+
+  async deleteAffirmation(id: number): Promise<boolean> {
+    const deleted = this.affirmations.delete(id);
+    await this.saveCollection('affirmations', this.affirmations);
+    return deleted;
   }
 }
 

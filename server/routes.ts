@@ -9,7 +9,9 @@ import {
   insertJournalSchema, 
   insertAssessmentSchema,
   insertChatMessageSchema,
-  insertAchievementSchema
+  insertAchievementSchema,
+  insertGoalSchema,
+  insertAffirmationSchema
 } from "@shared/schema";
 import { fromZodError, ValidationError } from "zod-validation-error";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -456,6 +458,344 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: validationError.message });
       }
       res.status(500).json({ message: "Server error during message submission" });
+    }
+  });
+
+  // Goals routes
+  app.get('/api/goals', authenticate, async (req, res) => {
+    try {
+      const goals = await storage.getGoalsByUserId(req.user.id);
+      res.json(goals);
+    } catch (error) {
+      res.status(500).json({ message: "Server error fetching goals" });
+    }
+  });
+
+  app.post('/api/goals', authenticate, async (req, res) => {
+    try {
+      const validatedData = insertGoalSchema.parse({
+        ...req.body,
+        userId: req.user.id
+      });
+      
+      const goal = await storage.createGoal(validatedData);
+      
+      // Add XP for setting a goal
+      const user = await storage.getUser(req.user.id);
+      if (user) {
+        await storage.updateUser(user.id, { 
+          xpPoints: user.xpPoints + 15,
+          lastActive: new Date()
+        });
+      }
+      
+      res.status(201).json(goal);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      res.status(500).json({ message: "Server error during goal creation" });
+    }
+  });
+
+  app.put('/api/goals/:id', authenticate, async (req, res) => {
+    try {
+      const goalId = Number(req.params.id);
+      const goal = await storage.getGoalById(goalId);
+      
+      if (!goal) {
+        return res.status(404).json({ message: "Goal not found" });
+      }
+      
+      if (goal.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized to update this goal" });
+      }
+      
+      const updatedGoal = await storage.updateGoal(goalId, req.body);
+      
+      // If goal was just completed, add XP
+      if (req.body.completed && !goal.completed) {
+        const user = await storage.getUser(req.user.id);
+        if (user) {
+          await storage.updateUser(user.id, { 
+            xpPoints: user.xpPoints + 30,
+            lastActive: new Date()
+          });
+        }
+      }
+      
+      res.json(updatedGoal);
+    } catch (error) {
+      res.status(500).json({ message: "Server error updating goal" });
+    }
+  });
+
+  app.delete('/api/goals/:id', authenticate, async (req, res) => {
+    try {
+      const goalId = Number(req.params.id);
+      const goal = await storage.getGoalById(goalId);
+      
+      if (!goal) {
+        return res.status(404).json({ message: "Goal not found" });
+      }
+      
+      if (goal.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized to delete this goal" });
+      }
+      
+      const success = await storage.deleteGoal(goalId);
+      
+      if (success) {
+        res.json({ message: "Goal deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete goal" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Server error deleting goal" });
+    }
+  });
+
+  // Affirmations routes
+  app.get('/api/affirmations', authenticate, async (req, res) => {
+    try {
+      const affirmations = await storage.getAffirmationsByUserId(req.user.id);
+      res.json(affirmations);
+    } catch (error) {
+      res.status(500).json({ message: "Server error fetching affirmations" });
+    }
+  });
+
+  app.post('/api/affirmations', authenticate, async (req, res) => {
+    try {
+      const validatedData = insertAffirmationSchema.parse({
+        ...req.body,
+        userId: req.user.id
+      });
+      
+      const affirmation = await storage.createAffirmation(validatedData);
+      
+      // Add XP for creating an affirmation
+      const user = await storage.getUser(req.user.id);
+      if (user) {
+        await storage.updateUser(user.id, { 
+          xpPoints: user.xpPoints + 10,
+          lastActive: new Date()
+        });
+      }
+      
+      res.status(201).json(affirmation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      res.status(500).json({ message: "Server error during affirmation creation" });
+    }
+  });
+  
+  // Generate AI affirmation
+  app.post('/api/affirmations/generate', authenticate, async (req, res) => {
+    try {
+      const { challenge, focus } = req.body;
+      
+      if (!challenge || !focus) {
+        return res.status(400).json({ message: "Challenge and focus are required" });
+      }
+      
+      try {
+        // Create chat session for affirmation generation
+        const chat = model.startChat({
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 200,
+          }
+        });
+        
+        // Generate affirmation based on user's challenge and focus
+        const prompt = `Generate a short, positive affirmation for someone dealing with ${challenge} who wants to focus on ${focus}. The affirmation should be empowering, uplifting, and based on cognitive behavioral therapy principles. Keep it concise (under 150 characters) and in first person. Don't include any explanation, just the affirmation.`;
+        
+        const result = await chat.sendMessage(prompt);
+        const affirmationText = result.response.text().trim();
+        
+        // Create the affirmation in storage
+        const affirmation = await storage.createAffirmation({
+          userId: req.user.id,
+          content: affirmationText,
+          category: focus,
+          favorite: false
+        });
+        
+        // Add XP for generating an affirmation
+        const user = await storage.getUser(req.user.id);
+        if (user) {
+          await storage.updateUser(user.id, { 
+            xpPoints: user.xpPoints + 15,
+            lastActive: new Date()
+          });
+        }
+        
+        res.status(201).json(affirmation);
+      } catch (genAiError) {
+        console.error("Error generating affirmation:", genAiError);
+        res.status(500).json({ message: "Error generating affirmation" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Server error during affirmation generation" });
+    }
+  });
+
+  app.put('/api/affirmations/:id', authenticate, async (req, res) => {
+    try {
+      const affirmationId = Number(req.params.id);
+      const affirmation = await storage.getAffirmationById(affirmationId);
+      
+      if (!affirmation) {
+        return res.status(404).json({ message: "Affirmation not found" });
+      }
+      
+      if (affirmation.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized to update this affirmation" });
+      }
+      
+      const updatedAffirmation = await storage.updateAffirmation(affirmationId, req.body);
+      res.json(updatedAffirmation);
+    } catch (error) {
+      res.status(500).json({ message: "Server error updating affirmation" });
+    }
+  });
+
+  app.delete('/api/affirmations/:id', authenticate, async (req, res) => {
+    try {
+      const affirmationId = Number(req.params.id);
+      const affirmation = await storage.getAffirmationById(affirmationId);
+      
+      if (!affirmation) {
+        return res.status(404).json({ message: "Affirmation not found" });
+      }
+      
+      if (affirmation.userId !== req.user.id) {
+        return res.status(403).json({ message: "Unauthorized to delete this affirmation" });
+      }
+      
+      const success = await storage.deleteAffirmation(affirmationId);
+      
+      if (success) {
+        res.json({ message: "Affirmation deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete affirmation" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Server error deleting affirmation" });
+    }
+  });
+
+  // Weekly Mental Health Report
+  app.get('/api/reports/weekly', authenticate, async (req, res) => {
+    try {
+      // Get user's data from the past week
+      const now = new Date();
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      // Get moods for the week
+      const allMoods = await storage.getMoodsByUserId(req.user.id);
+      const weekMoods = allMoods.filter(mood => 
+        new Date(mood.createdAt) >= oneWeekAgo
+      );
+      
+      // Get exercises for the week
+      const allExercises = await storage.getExercisesByUserId(req.user.id);
+      const weekExercises = allExercises.filter(exercise => 
+        new Date(exercise.createdAt) >= oneWeekAgo
+      );
+      
+      // Get journals for the week
+      const allJournals = await storage.getJournalsByUserId(req.user.id);
+      const weekJournals = allJournals.filter(journal => 
+        new Date(journal.createdAt) >= oneWeekAgo
+      );
+      
+      // Get goals
+      const goals = await storage.getGoalsByUserId(req.user.id);
+      
+      // Calculate metrics
+      const moodAverage = weekMoods.length > 0 
+        ? weekMoods.reduce((sum, mood) => sum + mood.intensity, 0) / weekMoods.length 
+        : null;
+      
+      const totalExerciseMinutes = weekExercises.reduce((sum, ex) => sum + ex.duration / 60, 0);
+      
+      const exercisesByType = weekExercises.reduce((acc, ex) => {
+        acc[ex.type] = (acc[ex.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      // Generate insights
+      let insights = [];
+      
+      if (weekMoods.length === 0) {
+        insights.push("You haven't tracked your mood this week. Regular tracking helps identify patterns.");
+      } else if (moodAverage !== null) {
+        if (moodAverage > 3.5) {
+          insights.push("Your mood has been generally positive this week. Great job!");
+        } else if (moodAverage < 2.5) {
+          insights.push("Your mood has been lower than usual. Consider trying more self-care activities.");
+        } else {
+          insights.push("Your mood has been neutral overall this week.");
+        }
+      }
+      
+      if (weekExercises.length === 0) {
+        insights.push("You haven't logged any wellness exercises this week. Even short sessions can be beneficial.");
+      } else if (weekExercises.length >= 3) {
+        insights.push(`You've completed ${weekExercises.length} exercises this week - excellent consistency!`);
+      }
+      
+      if (weekJournals.length === 0) {
+        insights.push("Try journaling to process your thoughts and feelings.");
+      } else {
+        insights.push(`You've written ${weekJournals.length} journal entries this week.`);
+      }
+      
+      if (goals.length > 0) {
+        const completedGoals = goals.filter(goal => goal.completed).length;
+        if (completedGoals > 0) {
+          insights.push(`You've completed ${completedGoals} goals. Well done!`);
+        }
+      }
+      
+      // Compile report
+      const report = {
+        period: {
+          start: oneWeekAgo.toISOString(),
+          end: now.toISOString()
+        },
+        moodData: {
+          entries: weekMoods.length,
+          average: moodAverage,
+          trend: weekMoods.length >= 2 ? 
+            (weekMoods[weekMoods.length-1].intensity > weekMoods[0].intensity ? 'improving' : 
+             weekMoods[weekMoods.length-1].intensity < weekMoods[0].intensity ? 'declining' : 'stable') : 'not enough data'
+        },
+        exerciseData: {
+          count: weekExercises.length,
+          totalMinutes: totalExerciseMinutes,
+          byType: exercisesByType
+        },
+        journalData: {
+          count: weekJournals.length
+        },
+        goalData: {
+          total: goals.length,
+          completed: goals.filter(goal => goal.completed).length,
+          inProgress: goals.filter(goal => !goal.completed).length
+        },
+        insights: insights
+      };
+      
+      res.json(report);
+    } catch (error) {
+      res.status(500).json({ message: "Server error generating weekly report" });
     }
   });
 
