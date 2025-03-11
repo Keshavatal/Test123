@@ -131,3 +131,18 @@ export default function ExerciseChatbot() {
     </div>
   );
 }
+import React from 'react';
+
+function ExerciseChatbot() {
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Interactive Exercise Chatbot</h1>
+      <div className="bg-white rounded-lg shadow p-6">
+        <p className="mb-4">This interactive chatbot will guide you through various exercises.</p>
+        {/* Implement exercise components here */}
+      </div>
+    </div>
+  );
+}
+
+export default ExerciseChatbot;

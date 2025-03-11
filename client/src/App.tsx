@@ -32,36 +32,68 @@ import PrivateRoute from './components/PrivateRoute';
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-      <Route path="/assessment" component={Assessment} />
-      <Route path="/exercises" component={Exercises} />
-      <Route path="/journal" component={Journal} />
-      <Route path="/progress" component={Progress} />
+      <Route path="/">
+        <Dashboard />
+      </Route>
+      <Route path="/login">
+        <Login />
+      </Route>
+      <Route path="/register">
+        <Register />
+      </Route>
+      <Route path="/assessment">
+        <Assessment />
+      </Route>
+      <Route path="/exercises">
+        <Exercises />
+      </Route>
+      <Route path="/journal">
+        <Journal />
+      </Route>
+      <Route path="/progress">
+        <Progress />
+      </Route>
 
       {/* Exercise Routes */}
-      <Route path="/exercises/breathing" component={BreathingExercise} />
-      <Route path="/exercises/mindfulness" component={MindfulnessMeditation} />
-      <Route path="/exercises/cognitive" component={CognitiveRestructuring} />
-      <Route path="/exercises/gratitude" component={GratitudePractice} />
-      <Route path="/exercises/box-breathing" component={BoxBreathing} />
-      <Route path="/exercises/progressive-relaxation" component={ProgressiveRelaxation} />
-      <Route path="/exercises/thought-record" component={ThoughtRecord} />
-      <Route path="/exercises/values-clarification" component={ValuesClarification} />
+      <Route path="/exercises/breathing">
+        <BreathingExercise />
+      </Route>
+      <Route path="/exercises/mindfulness">
+        <MindfulnessMeditation />
+      </Route>
+      <Route path="/exercises/cognitive">
+        <CognitiveRestructuring />
+      </Route>
+      <Route path="/exercises/gratitude">
+        <GratitudePractice />
+      </Route>
+      <Route path="/exercises/box-breathing">
+        <BoxBreathing />
+      </Route>
+      <Route path="/exercises/progressive-relaxation">
+        <ProgressiveRelaxation />
+      </Route>
+      <Route path="/exercises/thought-record">
+        <ThoughtRecord />
+      </Route>
+      <Route path="/exercises/values-clarification">
+        <ValuesClarification />
+      </Route>
 
-      <Route path="/chatbot"> {/* Existing route */}
+      <Route path="/chatbot">
         <PrivateRoute>
           <Chatbot />
         </PrivateRoute>
       </Route>
-      <Route path="/exercise-chatbot"> {/* Added route */}
+      <Route path="/exercise-chatbot">
         <PrivateRoute>
           <ExerciseChatbot />
         </PrivateRoute>
       </Route>
 
-      <Route component={NotFound} />
+      <Route>
+        <NotFound />
+      </Route>
     </Switch>
   );
 }
