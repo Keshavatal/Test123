@@ -26,6 +26,9 @@ import ValuesClarification from "./pages/exercises/ValuesClarification";
 import ExerciseChatbot from "./pages/ExerciseChatbot"; // Added import
 
 
+// Import PrivateRoute component
+import PrivateRoute from './components/PrivateRoute';
+
 function Router() {
   return (
     <Switch>
